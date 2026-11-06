@@ -8,6 +8,7 @@ import {
   parseInstagramInput,
   type InstagramExtras,
 } from "@/lib/socials"
+import { groupByAccount, groupNote, hasAccounts, type Grouped } from "@/lib/competitors"
 import { streamAnalysis, type Dataset, type Entity } from "@/lib/analysis"
 
 export const maxDuration = 120
@@ -47,7 +48,7 @@ function isSameBusiness(place: Place, extras: InstagramExtras, handle: string): 
 
 // Reads every social network linked from a website. Instagram is the anchor; the
 // other networks add to it when the business has them.
-async function socialsFromWebsite(website: string | null): Promise<Pick<Entity, "instagram" | "instagramNote" | "networks" | "networksNote">> {
+async function socialsFromWebsiteUncached(website: string | null): Promise<Pick<Entity, "instagram" | "instagramNote" | "networks" | "networksNote">> {
   const links = await findSocialLinks(website)
   const [instagram, others] = await Promise.all([
     links.instagram
@@ -61,8 +62,47 @@ async function socialsFromWebsite(website: string | null): Promise<Pick<Entity, 
   return { ...instagram, networks: others.networks, networksNote: others.note }
 }
 
-async function entityFromPlace(place: Place): Promise<Entity> {
-  return { name: place.name, place, ...(await socialsFromWebsite(place.website)) }
+type Socials = Awaited<ReturnType<typeof socialsFromWebsiteUncached>>
+type Reader = (place: Place) => Promise<Entity>
+
+// One reader per request: two locations with the same website are read (and billed) once.
+function makeReader(): Reader {
+  const cache = new Map<string, Promise<Socials>>()
+  return async (place) => {
+    const key = host(place.website) ?? `place:${place.id}`
+    let socials = cache.get(key)
+    if (!socials) {
+      socials = socialsFromWebsiteUncached(place.website)
+      cache.set(key, socials)
+    }
+    return { name: place.name, place, ...(await socials) }
+  }
+}
+
+// Reads competitors until MAX_COMPETITORS_WITH_SOCIAL distinct accounts are found (or the
+// places run out), so duplicate locations do not use up the slots.
+async function analyzeCompetitors(
+  business: Promise<Entity>,
+  places: Place[],
+  read: Reader
+): Promise<{ competitors: Entity[]; grouped: Grouped }> {
+  const analyzed: Entity[] = []
+  let cursor = 0
+  let need = MAX_COMPETITORS_WITH_SOCIAL
+  let grouped: Grouped = { competitors: [], sameBrandAsBusiness: 0, merged: 0 }
+  while (need > 0 && cursor < places.length) {
+    const batch = places.slice(cursor, cursor + need)
+    cursor += batch.length
+    const [biz, entities] = await Promise.all([business, Promise.all(batch.map(read))])
+    analyzed.push(...entities)
+    grouped = groupByAccount(biz, analyzed)
+    need = MAX_COMPETITORS_WITH_SOCIAL - grouped.competitors.filter(hasAccounts).length
+  }
+  const rest: Entity[] = places
+    .slice(cursor)
+    .map((p) => ({ name: p.name, place: p, instagram: null, instagramNote: "No analizado" }))
+  if (!analyzed.length) grouped = groupByAccount(await business, [])
+  return { competitors: [...grouped.competitors, ...rest], grouped }
 }
 
 async function entityFromHandle(handle: string): Promise<Entity> {
@@ -128,19 +168,16 @@ export async function POST(req: Request) {
           }
           let competitors: Entity[]
           let competitorsSource: string
+          let groupedNote = ""
 
           if (place) {
             send({ type: "status", text: "Encontré su ficha de Google. Buscando competidores cercanos..." })
             const near = await findCompetitors(place)
             send({ type: "status", text: "Leyendo las redes sociales de la competencia..." })
-            competitors = await Promise.all(
-              near.map((p, i) =>
-                i < MAX_COMPETITORS_WITH_SOCIAL
-                  ? entityFromPlace(p)
-                  : Promise.resolve<Entity>({ name: p.name, place: p, instagram: null, instagramNote: "No analizado" })
-              )
-            )
-            competitorsSource = "negocios cercanos del mismo tipo en Google Maps (radio 3 km)"
+            const result = await analyzeCompetitors(Promise.resolve(business), near, makeReader())
+            competitors = result.competitors
+            groupedNote = groupNote(result.grouped)
+            competitorsSource = `negocios cercanos del mismo tipo en Google Maps (radio 3 km)${groupedNote}`
           } else {
             send({ type: "status", text: "Sin ficha de Google confirmada. Usando cuentas similares de Instagram..." })
             competitors = await Promise.all(
@@ -193,14 +230,13 @@ export async function POST(req: Request) {
           const competitorPlaces = await findCompetitors(business)
 
           send({ type: "status", text: "Leyendo las redes sociales de tu negocio y de la competencia..." })
-          const [businessEntity, ...competitorEntities] = await Promise.all([
-            entityFromPlace(business),
-            ...competitorPlaces.map((p, i) =>
-              i < MAX_COMPETITORS_WITH_SOCIAL
-                ? entityFromPlace(p)
-                : Promise.resolve<Entity>({ name: p.name, place: p, instagram: null, instagramNote: "No analizado" })
-            ),
+          const read = makeReader()
+          const businessPromise = read(business)
+          const [businessEntity, result] = await Promise.all([
+            businessPromise,
+            analyzeCompetitors(businessPromise, competitorPlaces, read),
           ])
+          const competitorEntities = result.competitors
 
           data = {
             mode: "business_name",
@@ -209,7 +245,7 @@ export async function POST(req: Request) {
               ? `Local elegido por el usuario en Google Maps: ${business.name}, ${business.address}`
               : `Coincidencia clara en Google Maps para "${query}": ${business.name}, ${business.address}`,
             business: businessEntity,
-            competitorsSource: "negocios cercanos del mismo tipo en Google Maps (radio 3 km)",
+            competitorsSource: `negocios cercanos del mismo tipo en Google Maps (radio 3 km)${groupNote(result.grouped)}`,
             competitors: competitorEntities,
             generatedAt: new Date().toISOString(),
           }
