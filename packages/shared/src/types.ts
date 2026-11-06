@@ -27,12 +27,31 @@ export type InstagramStats = {
   lastPostDaysAgo: number | null
 }
 
+// Facebook, TikTok and YouTube. Instagram keeps its own shape (InstagramStats).
+export type Network = "facebook" | "tiktok" | "youtube"
+
+export type NetworkStats = {
+  network: Network
+  handle: string
+  followers: number | null
+  postsSampled: number
+  avgLikes: number | null
+  avgComments: number | null
+  avgViews: number | null
+  engagementRatePct: number | null
+  postsPerWeek: number | null
+  lastPostDaysAgo: number | null
+}
+
 export type Entity = {
   name: string
   // Google Places data. null when the business has no confirmed Google listing.
   place: Place | null
   instagram: InstagramStats | null
   instagramNote: string
+  // Other networks found on the business website. Absent when none were read.
+  networks?: NetworkStats[]
+  networksNote?: string
 }
 
 export type Dataset = {

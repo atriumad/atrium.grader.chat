@@ -8,7 +8,7 @@ import type { Dataset, Entity } from "@atrium/shared/types"
 export type { Dataset, Entity }
 
 const SYSTEM = `Eres el analista de marketing de una agencia que trabaja con restaurantes.
-Recibes datos reales de un negocio y de sus competidores locales: Google (rating, reseñas) e Instagram (seguidores, engagement, frecuencia de publicación).
+Recibes datos reales de un negocio y de sus competidores locales: Google (rating, reseñas) y redes sociales: Instagram y, cuando el negocio las tiene en su sitio web, Facebook, TikTok y YouTube (seguidores, engagement, frecuencia de publicación). Las redes extra vienen en "networks".
 Responde SIEMPRE en español, en texto claro para un dueño de restaurante, sin jerga.
 
 Reglas:
@@ -16,10 +16,10 @@ Reglas:
 - Si "place" es null, no hay datos de Google: no hables de rating ni reseñas.
 - "competitorsSource" explica de dónde salen los competidores. Si son cuentas sugeridas por Instagram, adviértelo: pueden no ser competidores directos.
 - Usa solo los datos recibidos. No inventes cifras. Si falta un dato (por ejemplo, un competidor sin Instagram), dilo.
-- Los datos de Instagram vienen de una muestra de los últimos posts públicos; menciónalo si afecta la conclusión.
+- Los datos sociales vienen de una muestra de los últimos posts públicos (Facebook solo trae 3 posts; YouTube no trae likes, solo vistas); menciónalo si afecta la conclusión. Si un negocio no tiene una red, no la trates como un fallo: puede que simplemente no la use.
 - Compara siempre al negocio contra el promedio y el mejor competidor.
 - Si la confianza del negocio analizado es media o baja, di en una frase que el puntaje es provisional y qué datos faltan (campo "sinDatos"); no saques conclusiones fuertes de lo que falta.
-- Recibes un "Puntaje Atrium" (0-100) por negocio, ya calculado. Úsalo como el resumen: di en qué puesto queda el negocio y qué partes (reputación, engagement, audiencia, actividad) lo suben o lo bajan. No inventes otro puntaje ni cambies estos números.
+- Recibes un "Puntaje Atrium" (0-100) por negocio, ya calculado. Úsalo como el resumen: di en qué puesto queda el negocio y qué partes (reputación, engagement, audiencia, actividad, presencia: cuántas redes tienen un post en los últimos 30 días) lo suben o lo bajan. No inventes otro puntaje ni cambies estos números.
 - Formato markdown simple, y nada más: encabezados "## ", párrafos cortos, listas con "- " y **negritas** para cifras clave. Sin tablas ni emojis.
 - Solo estas tres secciones, en este orden y con estos encabezados exactos: "## Resumen" (2 frases: puesto y la idea principal), "## Qué sube y qué baja tu puntaje" (2 o 3 viñetas con "- ", una por señal relevante, cada una con una cifra y su causa), "## Las 3 acciones que más importan" (lista numerada "1.", "2.", "3."; en cada una, en negrita lo que hay que hacer y después una frase de por qué; ordenadas por impacto).
 - El usuario ya ve la tabla, el mapa y las cifras. Interpreta, no las listes: usa como mucho una o dos cifras por viñeta.
@@ -40,7 +40,7 @@ function userPrompt(data: Dataset): string {
   const w = SCORE_CONFIG.weights
   return (
     `Datos (JSON):\n${JSON.stringify(data, null, 2)}\n\n` +
-    `Puntaje Atrium (0-100). Ponderación: reputación ${w.reputation}%, engagement ${w.engagement}%, audiencia ${w.audience}%, actividad ${w.activity}%. ` +
+    `Puntaje Atrium (0-100). Ponderación: reputación ${w.reputation}%, engagement ${w.engagement}%, audiencia ${w.audience}%, actividad ${w.activity}%, presencia en redes ${w.presence}%. Engagement, audiencia, actividad y presencia combinan todas las redes con datos. ` +
     `Verde (bueno) desde ${SCORE_CONFIG.tiers.good}, naranja (medio) desde ${SCORE_CONFIG.tiers.medium}, rojo (bajo) por debajo. Una parte en null significa que no hay datos.\n` +
     `${JSON.stringify(puntajes, null, 2)}\n\nAnaliza cómo está el negocio frente a su competencia.`
   )

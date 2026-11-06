@@ -20,7 +20,7 @@ export type MapPoint = {
   engagement: number | null
 }
 
-// Pin diameter grows with Instagram audience (log scale), so reach reads at a glance.
+// Pin diameter grows with total social audience (log scale), so reach reads at a glance.
 function pinSize(p: MapPoint): number {
   if (p.isYou) return 40
   if (!p.followers || p.followers <= 0) return 28

@@ -24,7 +24,16 @@ export function chatSystemPrompt(data: Dataset, analysisText: string): string {
           postsAnalizados: e.instagram.postsSampled,
         }
       : null,
-    nota: e.instagramNote !== "ok" ? e.instagramNote : undefined,
+    otrasRedes: (e.networks ?? []).map((n) => ({
+      red: n.network,
+      usuario: n.handle,
+      seguidores: n.followers,
+      engagementPct: n.engagementRatePct,
+      postsPorSemana: n.postsPerWeek,
+      diasDesdeUltimoPost: n.lastPostDaysAgo,
+      postsAnalizados: n.postsSampled,
+    })),
+    nota: [e.instagramNote !== "ok" ? e.instagramNote : null, e.networksNote ?? null].filter(Boolean).join("; ") || undefined,
   }))
   const cfg = bookingConfig()
   const w = SCORE_CONFIG.weights
@@ -35,8 +44,8 @@ export function chatSystemPrompt(data: Dataset, analysisText: string): string {
 # Lo que ya sabes
 Negocio analizado: ${data.business.name}. Identificación: ${data.identification}.
 Competencia: ${data.competitorsSource}.
-Puntaje Atrium (0-100): engagement ${w.engagement}%, reputación ${w.reputation}%, actividad ${w.activity}%, audiencia ${w.audience}%. Verde desde ${SCORE_CONFIG.tiers.good}, naranja desde ${SCORE_CONFIG.tiers.medium}, rojo por debajo. Es un criterio propio de Atrium, no un estándar de la industria.
-Los datos de Instagram vienen de una muestra de los últimos posts públicos.
+Puntaje Atrium (0-100): engagement ${w.engagement}%, reputación ${w.reputation}%, actividad ${w.activity}%, audiencia ${w.audience}%, presencia en redes ${w.presence}%. Verde desde ${SCORE_CONFIG.tiers.good}, naranja desde ${SCORE_CONFIG.tiers.medium}, rojo por debajo. Es un criterio propio de Atrium, no un estándar de la industria.
+Los datos sociales (Instagram y, si las tiene, Facebook, TikTok y YouTube) vienen de una muestra de los últimos posts públicos.
 
 Datos (JSON):
 ${JSON.stringify(entities, null, 1)}

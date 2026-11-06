@@ -40,6 +40,17 @@
     "scheme": "atriumgrader",
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {
+        "asyncRoutes": {
+          "web": true
+        }
+      },
+      "eas": {
+        "projectId": "cd334512-3a5a-4856-af6e-f2c78bdd0861"
+      }
+    },
+    "owner": "atrium-ad"
   }
 }

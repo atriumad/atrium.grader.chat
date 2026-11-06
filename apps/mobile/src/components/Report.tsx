@@ -148,8 +148,8 @@ const ScorePanel = memo(function ScorePanel({ you, total, avg, bench }: { you: R
         {open ? (
           <View style={styles.how}>
             <Text style={styles.howBody}>
-              Nota de 0 a 100 con cuatro señales: engagement {w.engagement}%, reputación {w.reputation}%, actividad {w.activity}% y audiencia{" "}
-              {w.audience}%. Las señales de Instagram suman un 70% y Google un 30%. Si falta una señal se calcula con las demás (hacen falta al
+              Nota de 0 a 100 con cinco señales: engagement {w.engagement}%, reputación {w.reputation}%, actividad {w.activity}%, audiencia{" "}
+              {w.audience}% y presencia {w.presence}%. Las señales sociales (Instagram, Facebook, TikTok y YouTube, las que tenga el negocio) suman un {100 - w.reputation}% y Google un {w.reputation}%. Si falta una señal se calcula con las demás (hacen falta al
               menos dos) y la confianza lo indica.
             </Text>
             <Text style={styles.howBody}>
@@ -233,13 +233,13 @@ export function Report({ data, children, settled = true }: { data: Dataset; chil
         <>
           {points.length > 0 ? (
             <Reveal>
-              <Card title="Dónde compites" footer="Halo = puntaje · tamaño = audiencia en Instagram. Toca un pin para el detalle.">
+              <Card title="Dónde compites" footer="Halo = puntaje · tamaño = audiencia total en redes. Toca un pin para el detalle.">
                 <ResultsMap points={points} activeKey={active} onActive={setActive} />
               </Card>
             </Reveal>
           ) : null}
           <Reveal delay={120}>
-            <Card title="Ranking de tu zona" footer={`Competencia: ${data.competitorsSource} · Instagram: últimos posts públicos.`}>
+            <Card title="Ranking de tu zona" footer={`Competencia: ${data.competitorsSource} · Redes: últimos posts públicos.`}>
               {rows.map((r) => (
                 <RankRow key={r.key} r={r} active={active === r.key} onPress={() => setActive((a) => (a === r.key ? null : r.key))} />
               ))}

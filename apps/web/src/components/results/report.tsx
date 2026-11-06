@@ -163,9 +163,9 @@ function ScorePanel({ you, total, avg, bench }: { you: Row; total: number; avg: 
         </summary>
         <div className="flex max-w-[68ch] flex-col gap-2 px-5 pb-4 text-sm text-muted-foreground text-pretty">
           <p>
-            Nota de 0 a 100 con cuatro señales: engagement {SCORE_CONFIG.weights.engagement}%, reputación {SCORE_CONFIG.weights.reputation}%,
-            actividad {SCORE_CONFIG.weights.activity}% y audiencia {SCORE_CONFIG.weights.audience}%. Las señales de Instagram suman un 70% y
-            Google un 30%. Si falta una señal se calcula con las demás (hacen falta al menos dos) y la confianza lo indica.
+            Nota de 0 a 100 con cinco señales: engagement {SCORE_CONFIG.weights.engagement}%, reputación {SCORE_CONFIG.weights.reputation}%,
+            actividad {SCORE_CONFIG.weights.activity}%, audiencia {SCORE_CONFIG.weights.audience}% y presencia {SCORE_CONFIG.weights.presence}%. Las señales
+            sociales (Instagram, Facebook, TikTok y YouTube, las que tenga el negocio) suman un {100 - SCORE_CONFIG.weights.reputation}% y Google un {SCORE_CONFIG.weights.reputation}%. Si falta una señal se calcula con las demás (hacen falta al menos dos) y la confianza lo indica.
           </p>
           <p>
             <strong className="font-medium text-foreground">Engagement</strong> se compara con lo esperable para el tamaño de la cuenta
@@ -221,7 +221,7 @@ export function Report({
           <h3 className="border-b px-4 py-3 text-sm font-medium sm:px-5">Dónde compites</h3>
           <CompetitorMap points={points} radiusMeters={COMPETITOR_RADIUS_M} activeKey={active} onActive={setActive} />
           <p className="border-t px-4 py-2.5 text-xs text-muted-foreground sm:px-5">
-            Halo = puntaje · tamaño = audiencia en Instagram. Pulsa un pin para el detalle.
+            Halo = puntaje · tamaño = audiencia total en redes. Pulsa un pin para el detalle.
           </p>
         </div>
       ) : null}
@@ -287,7 +287,7 @@ export function Report({
           </table>
         </div>
         <p className="border-t px-4 py-2.5 text-xs text-muted-foreground sm:px-5">
-          Competencia: {data.competitorsSource} · Instagram: últimos posts públicos.
+          Competencia: {data.competitorsSource} · Redes: últimos posts públicos.
         </p>
       </div>
     </section>

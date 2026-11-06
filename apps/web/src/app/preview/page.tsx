@@ -303,7 +303,7 @@ export default function PreviewPage() {
                 ¿Cómo está tu negocio frente a la competencia?
               </h1>
               <p className="max-w-[52ch] text-base/relaxed text-muted-foreground text-pretty">
-                Escribe el nombre con la ciudad, o su @ de Instagram, que es más preciso. Comparo su Google e Instagram con los negocios de su entorno.
+                Escribe el nombre con la ciudad, o su @ de Instagram, que es más preciso. Comparo su Google y sus redes sociales con los negocios de su entorno.
               </p>
             </div>
             <div className="w-full text-left">{composer}</div>

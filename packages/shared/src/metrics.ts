@@ -1,4 +1,4 @@
-import type { Dataset, Entity } from "./types"
+import type { Dataset, Entity, Network } from "./types"
 
 // Must match the default radius used by findCompetitors in places.ts.
 export const COMPETITOR_RADIUS_M = 3000
@@ -10,8 +10,8 @@ export const COMPETITOR_RADIUS_M = 3000
 // all read this one place. Shared by web and mobile via @atrium/shared.
 // ---------------------------------------------------------------------------
 export const SCORE_CONFIG = {
-  // Social signals weigh 70% because they are the agency's focus; Google reputation 30%.
-  weights: { engagement: 30, reputation: 30, activity: 25, audience: 15 },
+  // Social signals weigh 73% because they are the agency's focus; Google reputation 27%.
+  weights: { engagement: 28, reputation: 27, activity: 22, audience: 13, presence: 10 },
   tiers: { good: 70, medium: 45 },
   reputation: {
     priorMean: 4.2, // rating we assume for a restaurant with no reviews
@@ -28,6 +28,8 @@ export const SCORE_CONFIG = {
       { upTo: 100_000, expected: 2 },
       { upTo: Infinity, expected: 1.2 },
     ],
+    // Typical engagement of each network relative to Instagram (our judgment).
+    networkFactor: { instagram: 1, tiktok: 1.5, facebook: 0.2, youtube: 0.4 },
     fullRatio: 1.5, // 1.5x the expected rate scores 100 (1.0x scores about 67)
     viewsShare: 0.3, // share of the part that comes from views / followers, when known
     viewsFull: 0.5, // average views equal to 50% of followers score 100
@@ -44,8 +46,10 @@ export const SCORE_CONFIG = {
     ],
   },
   audience: { followersFloor: 1_000, followersFull: 100_000 },
+  // Presence: networks with a post in the last `activeDays` days. `networksFull` of them score 100.
+  presence: { activeDays: 30, networksFull: 3 },
   confidence: {
-    minPostsSample: 8, // fewer posts than this and the Instagram numbers are shaky
+    minPostsSample: 8, // fewer posts than this and the social numbers are shaky (Facebook only returns 3, so it is ignored)
     high: 0.85,
     medium: 0.6,
   },
@@ -71,6 +75,7 @@ export const PART_LABEL: Record<PartKey, string> = {
   reputation: "Reputación",
   activity: "Actividad",
   audience: "Audiencia",
+  presence: "Presencia",
 }
 export const TIER_VAR: Record<Tier, string> = {
   good: "var(--tier-good)",
@@ -126,34 +131,107 @@ function reputationPart(e: Entity): number | null {
   return 100 * (c.ratingShare * ratingScore + (1 - c.ratingShare) * volumeScore)
 }
 
-function engagementPart(e: Entity): number | null {
-  const ig = e.instagram
-  if (!ig || ig.engagementRatePct == null) return null
-  const c = SCORE_CONFIG.engagement
-  const ratio = ig.engagementRatePct / expectedEngagement(ig.followers)
-  const base = 100 * clamp01(ratio / c.fullRatio)
-  if (ig.avgViews != null && ig.avgViews > 0 && ig.followers) {
-    const views = 100 * clamp01(ig.avgViews / ig.followers / c.viewsFull)
-    return (1 - c.viewsShare) * base + c.viewsShare * views
-  }
-  return base
+// One social account reduced to the numbers the score needs, whatever the network.
+export type ChannelNetwork = "instagram" | Network
+export type Channel = {
+  network: ChannelNetwork
+  handle: string
+  followers: number | null
+  engagementRatePct: number | null
+  avgViews: number | null
+  postsPerWeek: number | null
+  lastPostDaysAgo: number | null
+  postsSampled: number
 }
 
-function activityPart(e: Entity): number | null {
+export function channelsOf(e: Entity): Channel[] {
+  const out: Channel[] = []
   const ig = e.instagram
-  if (!ig) return null
-  const c = SCORE_CONFIG.activity
-  const freq = ig.postsPerWeek != null ? 100 * clamp01(ig.postsPerWeek / c.postsPerWeekFull) : null
-  const rec = ig.lastPostDaysAgo != null ? recencyScore(ig.lastPostDaysAgo) : null
-  if (freq !== null && rec !== null) return c.frequencyShare * freq + (1 - c.frequencyShare) * rec
+  if (ig) out.push({ network: "instagram", ...pick(ig) })
+  for (const n of e.networks ?? []) out.push({ network: n.network, ...pick(n) })
+  return out
+}
+
+function pick(s: { handle: string; followers: number | null; engagementRatePct: number | null; avgViews: number | null; postsPerWeek: number | null; lastPostDaysAgo: number | null; postsSampled: number }) {
+  return {
+    handle: s.handle,
+    followers: s.followers,
+    engagementRatePct: s.engagementRatePct,
+    avgViews: s.avgViews,
+    postsPerWeek: s.postsPerWeek,
+    lastPostDaysAgo: s.lastPostDaysAgo,
+    postsSampled: s.postsSampled,
+  }
+}
+
+// Bigger accounts count more, on a log scale so one giant channel does not drown the rest.
+const channelWeight = (c: Channel) => Math.log10((c.followers ?? 0) + 10)
+
+function weightedMean(items: Array<{ w: number; v: number }>): number | null {
+  const w = items.reduce((a, i) => a + i.w, 0)
+  return w > 0 ? items.reduce((a, i) => a + i.w * i.v, 0) / w : null
+}
+
+function channelEngagement(c: Channel): number | null {
+  const k = SCORE_CONFIG.engagement
+  const expected = expectedEngagement(c.followers) * k.networkFactor[c.network]
+  const base = c.engagementRatePct != null ? 100 * clamp01(c.engagementRatePct / expected / k.fullRatio) : null
+  const views =
+    c.avgViews != null && c.avgViews > 0 && c.followers ? 100 * clamp01(c.avgViews / c.followers / k.viewsFull) : null
+  if (base !== null && views !== null) return (1 - k.viewsShare) * base + k.viewsShare * views
+  return base ?? (c.network === "instagram" ? null : views)
+}
+
+function channelActivity(c: Channel): number | null {
+  const k = SCORE_CONFIG.activity
+  const freq = c.postsPerWeek != null ? 100 * clamp01(c.postsPerWeek / k.postsPerWeekFull) : null
+  const rec = c.lastPostDaysAgo != null ? recencyScore(c.lastPostDaysAgo) : null
+  if (freq !== null && rec !== null) return k.frequencyShare * freq + (1 - k.frequencyShare) * rec
   return freq ?? rec
 }
 
+function engagementPart(e: Entity): number | null {
+  const scored = channelsOf(e).flatMap((c) => {
+    const v = channelEngagement(c)
+    return v === null ? [] : [{ w: channelWeight(c), v }]
+  })
+  return weightedMean(scored)
+}
+
+// Mostly the best channel (one strong network is real activity), a bit the average.
+function activityPart(e: Entity): number | null {
+  const vals = channelsOf(e).flatMap((c) => {
+    const v = channelActivity(c)
+    return v === null ? [] : [v]
+  })
+  if (!vals.length) return null
+  const best = Math.max(...vals)
+  const mean = vals.reduce((a, b) => a + b, 0) / vals.length
+  return (2 * best + mean) / 3
+}
+
+export function totalFollowers(e: Entity): number | null {
+  const f = channelsOf(e).flatMap((c) => (c.followers != null && c.followers > 0 ? [c.followers] : []))
+  return f.length ? f.reduce((a, b) => a + b, 0) : null
+}
+
 function audiencePart(e: Entity): number | null {
-  const f = e.instagram?.followers
-  if (f == null || f <= 0) return null
+  const f = totalFollowers(e)
+  if (f == null) return null
   const a = SCORE_CONFIG.audience
   return 100 * clamp01((Math.log10(f) - Math.log10(a.followersFloor)) / (Math.log10(a.followersFull) - Math.log10(a.followersFloor)))
+}
+
+export function activeNetworks(e: Entity): ChannelNetwork[] {
+  const days = SCORE_CONFIG.presence.activeDays
+  return channelsOf(e)
+    .filter((c) => c.lastPostDaysAgo != null && c.lastPostDaysAgo <= days)
+    .map((c) => c.network)
+}
+
+function presencePart(e: Entity): number | null {
+  if (!channelsOf(e).length) return null
+  return 100 * clamp01(activeNetworks(e).length / SCORE_CONFIG.presence.networksFull)
 }
 
 function partsFor(e: Entity): ScorePart[] {
@@ -162,6 +240,7 @@ function partsFor(e: Entity): ScorePart[] {
     { key: "reputation", score: reputationPart(e) },
     { key: "activity", score: activityPart(e) },
     { key: "audience", score: audiencePart(e) },
+    { key: "presence", score: presencePart(e) },
   ]
 }
 
@@ -175,13 +254,14 @@ function totalOf(parts: ScorePart[]): number | null {
   return Math.round(sum / weight)
 }
 
-// Confidence = share of the weight that has data, reduced when the Instagram sample is small.
+// Confidence = share of the weight that has data, reduced when every post sample is small.
 function confidenceOf(e: Entity, parts: ScorePart[]): Score["confidence"] {
   const w = SCORE_CONFIG.weights
   const total = Object.values(w).reduce((a, b) => a + b, 0)
   const have = parts.filter((p) => p.score !== null).reduce((a, p) => a + w[p.key], 0)
   const c = SCORE_CONFIG.confidence
-  const sampleFactor = e.instagram && e.instagram.postsSampled < c.minPostsSample ? 0.7 : 1
+  const sampled = channelsOf(e).filter((ch) => ch.network !== "facebook")
+  const sampleFactor = sampled.length && sampled.every((ch) => ch.postsSampled < c.minPostsSample) ? 0.7 : 1
   const value = (have / total) * sampleFactor
   return { value, level: value >= c.high ? "high" : value >= c.medium ? "medium" : "low" }
 }
@@ -220,6 +300,8 @@ export type Row = {
   engagement: number | null
   postsPerWeek: number | null
   lastPostDaysAgo: number | null
+  networks: ChannelNetwork[] // networks with data
+  activeNetworks: number | null // networks with a post in the last 30 days
   rating: number | null
   reviews: number | null
   lat: number | null
@@ -229,20 +311,26 @@ export type Row = {
 
 function toRow(e: Entity, s: Score, isYou: boolean, i: number): Omit<Row, "rank"> {
   const hasCoords = !!e.place && (e.place.lat !== 0 || e.place.lng !== 0)
+  const ch = channelsOf(e)
+  const rates = ch.flatMap((c) => (c.engagementRatePct != null ? [{ w: channelWeight(c), v: c.engagementRatePct }] : []))
+  const ppw = ch.flatMap((c) => (c.postsPerWeek != null ? [c.postsPerWeek] : []))
+  const last = ch.flatMap((c) => (c.lastPostDaysAgo != null ? [c.lastPostDaysAgo] : []))
   return {
     key: `${isYou ? "you" : "c"}-${i}`,
     name: e.name,
-    handle: e.instagram?.handle ?? null,
+    handle: ch[0]?.handle ?? null,
     isYou,
     score: s.total,
     tier: s.tier,
     parts: s.parts,
     confidence: s.confidence,
     missing: s.missing,
-    followers: e.instagram?.followers ?? null,
-    engagement: e.instagram?.engagementRatePct ?? null,
-    postsPerWeek: e.instagram?.postsPerWeek ?? null,
-    lastPostDaysAgo: e.instagram?.lastPostDaysAgo ?? null,
+    followers: totalFollowers(e),
+    engagement: weightedMean(rates),
+    postsPerWeek: ppw.length ? Math.round(ppw.reduce((a, b) => a + b, 0) * 10) / 10 : null,
+    lastPostDaysAgo: last.length ? Math.min(...last) : null,
+    networks: ch.map((c) => c.network),
+    activeNetworks: ch.length ? activeNetworks(e).length : null,
     rating: e.place?.rating ?? null,
     reviews: e.place?.reviews ?? null,
     lat: hasCoords ? e.place!.lat : null,
@@ -301,7 +389,7 @@ const PARTS: Array<{
   { key: "reputation", rawLabel: "Rating en Google", raw: (r) => r.rating, format: fmt.rating },
   {
     key: "activity",
-    rawLabel: "Posts por semana",
+    rawLabel: "Posts por semana (todas las redes)",
     raw: (r) => r.postsPerWeek,
     format: fmt.postsPerWeek,
     you: (r) =>
@@ -309,7 +397,8 @@ const PARTS: Array<{
         ? null
         : `${fmt.postsPerWeek(r.postsPerWeek)}${r.lastPostDaysAgo !== null ? ` · último post hace ${r.lastPostDaysAgo} d` : ""}`,
   },
-  { key: "audience", rawLabel: "Seguidores en Instagram", raw: (r) => r.followers, format: fmt.followers },
+  { key: "audience", rawLabel: "Seguidores en redes", raw: (r) => r.followers, format: fmt.followers },
+  { key: "presence", rawLabel: "Redes activas (post en 30 días)", raw: (r) => r.activeNetworks, format: (n) => String(n) },
 ]
 
 function mean(vals: Array<number | null>): number | null {

@@ -1,7 +1,8 @@
 import { findBusiness, findCandidates, findCompetitors, getPlace, type Place } from "@/lib/places"
 import { decide } from "@/lib/match"
 import {
-  findInstagramHandle,
+  findSocialLinks,
+  getNetworkStats,
   getInstagramSnapshot,
   getInstagramStats,
   parseInstagramInput,
@@ -44,21 +45,24 @@ function isSameBusiness(place: Place, extras: InstagramExtras, handle: string): 
   return names.some((n) => n.length >= 4 && (n === pn || pn.includes(n) || n.includes(pn)))
 }
 
+// Reads every social network linked from a website. Instagram is the anchor; the
+// other networks add to it when the business has them.
+async function socialsFromWebsite(website: string | null): Promise<Pick<Entity, "instagram" | "instagramNote" | "networks" | "networksNote">> {
+  const links = await findSocialLinks(website)
+  const [instagram, others] = await Promise.all([
+    links.instagram
+      ? getInstagramStats(links.instagram).then(
+          (s) => ({ instagram: s, instagramNote: "ok" }),
+          (e) => ({ instagram: null, instagramNote: `Instagram @${links.instagram} no disponible: ${errMsg(e)}` })
+        )
+      : Promise.resolve({ instagram: null, instagramNote: "No se encontró Instagram en su sitio web" }),
+    getNetworkStats(links),
+  ])
+  return { ...instagram, networks: others.networks, networksNote: others.note }
+}
+
 async function entityFromPlace(place: Place): Promise<Entity> {
-  const handle = await findInstagramHandle(place.website)
-  if (!handle) {
-    return { name: place.name, place, instagram: null, instagramNote: "No se encontró Instagram en su sitio web" }
-  }
-  try {
-    return { name: place.name, place, instagram: await getInstagramStats(handle), instagramNote: "ok" }
-  } catch (e) {
-    return {
-      name: place.name,
-      place,
-      instagram: null,
-      instagramNote: `Instagram @${handle} no disponible: ${errMsg(e)}`,
-    }
-  }
+  return { name: place.name, place, ...(await socialsFromWebsite(place.website)) }
 }
 
 async function entityFromHandle(handle: string): Promise<Entity> {
@@ -111,14 +115,24 @@ export async function POST(req: Request) {
             }
           }
 
-          const business: Entity = { name: displayName, place, instagram: stats, instagramNote: "ok" }
+          // Other networks come from the business website (Google listing, else the IG profile link).
+          send({ type: "status", text: "Buscando sus otras redes sociales (Facebook, TikTok, YouTube)..." })
+          const others = await getNetworkStats(await findSocialLinks(place?.website ?? extras.externalUrl))
+          const business: Entity = {
+            name: displayName,
+            place,
+            instagram: stats,
+            instagramNote: "ok",
+            networks: others.networks,
+            networksNote: others.note,
+          }
           let competitors: Entity[]
           let competitorsSource: string
 
           if (place) {
             send({ type: "status", text: "Encontré su ficha de Google. Buscando competidores cercanos..." })
             const near = await findCompetitors(place)
-            send({ type: "status", text: "Leyendo Instagram de la competencia..." })
+            send({ type: "status", text: "Leyendo las redes sociales de la competencia..." })
             competitors = await Promise.all(
               near.map((p, i) =>
                 i < MAX_COMPETITORS_WITH_SOCIAL
@@ -178,7 +192,7 @@ export async function POST(req: Request) {
           send({ type: "status", text: `Encontré: ${business.name} (${business.address}). Buscando competidores...` })
           const competitorPlaces = await findCompetitors(business)
 
-          send({ type: "status", text: "Leyendo Instagram de tu negocio y de la competencia..." })
+          send({ type: "status", text: "Leyendo las redes sociales de tu negocio y de la competencia..." })
           const [businessEntity, ...competitorEntities] = await Promise.all([
             entityFromPlace(business),
             ...competitorPlaces.map((p, i) =>

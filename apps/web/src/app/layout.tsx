@@ -20,7 +20,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Atrium Grader",
-  description: "Compara tu restaurante con la competencia en Google e Instagram",
+  description: "Compara tu restaurante con la competencia en Google y redes sociales",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
