@@ -4,11 +4,19 @@
     "appVersionSource": "remote"
   },
   "build": {
+    "preview": {
+      "distribution": "internal",
+      "environment": "preview",
+      "ios": { "simulator": false },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://REPLACE-ME.vercel.app"
+      }
+    },
     "production": {
       "autoIncrement": true,
       "environment": "production",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://REPLACE-ME.example.com"
+        "EXPO_PUBLIC_API_URL": "https://REPLACE-ME.vercel.app"
       }
     }
   },

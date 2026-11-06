@@ -1,0 +1,41 @@
+name: iOS build
+
+# Manual: GitHub > Actions > "iOS build" > Run workflow.
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: "EAS build profile"
+        type: choice
+        options: [preview, production]
+        default: production
+      submit:
+        description: "Send to TestFlight when the build finishes (production only)"
+        type: boolean
+        default: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - run: npm ci
+        working-directory: .
+      - name: Build on EAS
+        run: |
+          ARGS="--platform ios --profile ${{ inputs.profile }} --non-interactive --wait"
+          if [ "${{ inputs.submit }}" = "true" ] && [ "${{ inputs.profile }}" = "production" ]; then
+            ARGS="$ARGS --auto-submit"
+          fi
+          eas build $ARGS
