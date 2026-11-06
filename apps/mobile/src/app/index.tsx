@@ -19,7 +19,7 @@ import { Report } from "@/components/Report"
 import { SlotChips } from "@/components/SlotChips"
 import { analyze, type Place } from "@/lib/api"
 import { chat, type ChatMessage, type Proposal, type Slot } from "@/lib/chat"
-import { scoreAll } from "@/lib/metrics"
+import { activateScoring, scoreAll } from "@/lib/metrics"
 import { createPacer } from "@/lib/pacer"
 import type { Dataset } from "@/lib/types"
 import { colors, fonts, radius, shadow } from "@/theme"
@@ -105,6 +105,7 @@ export default function Home() {
           if (evt.type === "status") {
             patch(id, (t) => ({ steps: t.steps[t.steps.length - 1] === evt.text ? t.steps : [...t.steps, evt.text] }))
           } else if (evt.type === "data") {
+            activateScoring(evt.data.scoring) // rules published in the admin panel
             patch(id, () => ({ data: evt.data }))
           } else if (evt.type === "text") {
             pacer.push(evt.text)

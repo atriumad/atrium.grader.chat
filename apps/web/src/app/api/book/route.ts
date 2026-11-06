@@ -1,4 +1,5 @@
 import { BookingError, createBooking } from "@/lib/booking"
+import { logEvent } from "@/lib/admin/log"
 import { allow, clientKey } from "@/lib/rate-limit"
 
 // Creates the meeting. Only called when the user presses Confirm on the proposal card.
@@ -19,6 +20,7 @@ export async function POST(req: Request) {
       businessName: String(b.businessName ?? ""),
       score: typeof b.score === "number" ? b.score : null,
     })
+    logEvent("booking", { mock: r.mock })
     return Response.json({ ok: true, label: r.label, mock: r.mock, meetLink: r.meetLink ?? null })
   } catch (e) {
     if (e instanceof BookingError) {

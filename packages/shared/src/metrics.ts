@@ -3,13 +3,31 @@ import type { Dataset, Entity, Network } from "./types"
 // Must match the default radius used by findCompetitors in places.ts.
 export const COMPETITOR_RADIUS_M = 3000
 
+
+export type ScoreConfig = {
+  weights: { engagement: number; reputation: number; activity: number; audience: number; presence: number }
+  tiers: { good: number; medium: number }
+  reputation: { priorMean: number; priorWeight: number; ratingFloor: number; ratingShare: number; volumeFull: number }
+  engagement: {
+    expectedByFollowers: Array<{ upTo: number; expected: number }>
+    networkFactor: { instagram: number; tiktok: number; facebook: number; youtube: number }
+    fullRatio: number
+    viewsShare: number
+    viewsFull: number
+  }
+  activity: { postsPerWeekFull: number; frequencyShare: number; recency: Array<{ days: number; score: number }> }
+  audience: { followersFloor: number; followersFull: number }
+  presence: { activeDays: number; networksFull: number }
+  confidence: { minPostsSample: number; high: number; medium: number }
+}
+
 // ---------------------------------------------------------------------------
 // Puntaje Atrium: 0-100 per business, built only from data we actually have.
 // Rules approved by the agency on 2026-11-05. The numbers are our own judgment,
 // not an industry standard: tune them here. The UI, the map and the AI prompt
-// all read this one place. Shared by web and mobile via @atrium/shared.
+// all read the active config (the defaults below, or the rules published in the admin panel). Shared by web and mobile via @atrium/shared.
 // ---------------------------------------------------------------------------
-export const SCORE_CONFIG = {
+export const DEFAULT_SCORE_CONFIG: ScoreConfig = {
   // Social signals weigh 73% because they are the agency's focus; Google reputation 27%.
   weights: { engagement: 28, reputation: 27, activity: 22, audience: 13, presence: 10 },
   tiers: { good: 70, medium: 45 },
@@ -53,10 +71,119 @@ export const SCORE_CONFIG = {
     high: 0.85,
     medium: 0.6,
   },
-} as const
+}
+
+
+// ---- Active config: defaults, or the rules published in the admin panel ----
+// Web and mobile score on the client, so the server ships the published config
+// inside the dataset and the client activates it before computing anything.
+let active: ScoreConfig = DEFAULT_SCORE_CONFIG
+export const cfg = (): ScoreConfig => active
+export const getScoreConfig = cfg
+/** Back-compat alias for code that reads the defaults/active rules by name. */
+export const SCORE_CONFIG = new Proxy({} as ScoreConfig, { get: (_t, k) => (active as never)[k] })
+
+export function activateScoring(input?: unknown): ScoreConfig {
+  active = input ? sanitizeScoreConfig(input) : DEFAULT_SCORE_CONFIG
+  return active
+}
+export function withScoreConfig<T>(config: ScoreConfig, fn: () => T): T {
+  const prev = active
+  active = config
+  try {
+    return fn()
+  } finally {
+    active = prev
+  }
+}
+
+const num = (v: unknown, d: number, min: number, max: number): number => {
+  const n = typeof v === "number" ? v : v === null ? Infinity : Number(v)
+  return (Number.isFinite(n) || (n === Infinity && max === Infinity)) && n >= min && n <= max ? n : d
+}
+const obj = (v: unknown): Record<string, unknown> => (v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : {})
+
+/** Merges untrusted input over the defaults, clamping every number to a sane range. */
+export function sanitizeScoreConfig(input: unknown): ScoreConfig {
+  const d = DEFAULT_SCORE_CONFIG
+  const r = obj(input)
+  const w = obj(r.weights), t = obj(r.tiers), rep = obj(r.reputation), en = obj(r.engagement), ac = obj(r.activity)
+  const au = obj(r.audience), pr = obj(r.presence), co = obj(r.confidence), nf = obj(en.networkFactor)
+  const weights = {
+    engagement: num(w.engagement, d.weights.engagement, 0, 100),
+    reputation: num(w.reputation, d.weights.reputation, 0, 100),
+    activity: num(w.activity, d.weights.activity, 0, 100),
+    audience: num(w.audience, d.weights.audience, 0, 100),
+    presence: num(w.presence, d.weights.presence, 0, 100),
+  }
+  const good = num(t.good, d.tiers.good, 1, 100)
+  const medium = Math.min(num(t.medium, d.tiers.medium, 0, 100), good)
+  const steps = (v: unknown, def: Array<{ upTo: number; expected: number }>) => {
+    const list = Array.isArray(v)
+      ? v
+          .map((x) => ({ upTo: num(obj(x).upTo, NaN, 1, Infinity), expected: num(obj(x).expected, NaN, 0.01, 100) }))
+          .filter((x) => !Number.isNaN(x.upTo) && !Number.isNaN(x.expected))
+          .sort((a, b) => a.upTo - b.upTo)
+          .slice(0, 8)
+      : []
+    if (!list.length) return def
+    if (list[list.length - 1].upTo !== Infinity) list.push({ upTo: Infinity, expected: list[list.length - 1].expected })
+    return list
+  }
+  const rec = Array.isArray(ac.recency)
+    ? ac.recency
+        .map((x) => ({ days: num(obj(x).days, NaN, 0, 3650), score: num(obj(x).score, NaN, 0, 100) }))
+        .filter((x) => !Number.isNaN(x.days) && !Number.isNaN(x.score))
+        .sort((a, b) => a.days - b.days)
+        .slice(0, 8)
+    : []
+  return {
+    weights: Object.values(weights).some((x) => x > 0) ? weights : d.weights,
+    tiers: { good, medium },
+    reputation: {
+      priorMean: num(rep.priorMean, d.reputation.priorMean, 1, 5),
+      priorWeight: num(rep.priorWeight, d.reputation.priorWeight, 0, 10_000),
+      ratingFloor: num(rep.ratingFloor, d.reputation.ratingFloor, 1, 4.9),
+      ratingShare: num(rep.ratingShare, d.reputation.ratingShare, 0, 1),
+      volumeFull: num(rep.volumeFull, d.reputation.volumeFull, 10, 1_000_000),
+    },
+    engagement: {
+      expectedByFollowers: steps(en.expectedByFollowers, d.engagement.expectedByFollowers),
+      networkFactor: {
+        instagram: num(nf.instagram, d.engagement.networkFactor.instagram, 0.01, 10),
+        tiktok: num(nf.tiktok, d.engagement.networkFactor.tiktok, 0.01, 10),
+        facebook: num(nf.facebook, d.engagement.networkFactor.facebook, 0.01, 10),
+        youtube: num(nf.youtube, d.engagement.networkFactor.youtube, 0.01, 10),
+      },
+      fullRatio: num(en.fullRatio, d.engagement.fullRatio, 1, 10),
+      viewsShare: num(en.viewsShare, d.engagement.viewsShare, 0, 1),
+      viewsFull: num(en.viewsFull, d.engagement.viewsFull, 0.01, 10),
+    },
+    activity: {
+      postsPerWeekFull: num(ac.postsPerWeekFull, d.activity.postsPerWeekFull, 0.5, 30),
+      frequencyShare: num(ac.frequencyShare, d.activity.frequencyShare, 0, 1),
+      recency: rec.length ? rec : d.activity.recency,
+    },
+    audience: (() => {
+      const floor = num(au.followersFloor, d.audience.followersFloor, 1, 1e9)
+      return { followersFloor: floor, followersFull: Math.max(num(au.followersFull, d.audience.followersFull, 2, 1e10), floor * 2) }
+    })(),
+    presence: { activeDays: num(pr.activeDays, d.presence.activeDays, 1, 365), networksFull: num(pr.networksFull, d.presence.networksFull, 1, 4) },
+    confidence: {
+      minPostsSample: num(co.minPostsSample, d.confidence.minPostsSample, 1, 100),
+      high: num(co.high, d.confidence.high, 0, 1),
+      medium: Math.min(num(co.medium, d.confidence.medium, 0, 1), num(co.high, d.confidence.high, 0, 1)),
+    },
+  }
+}
+
+/** JSON-safe copy (Infinity becomes null; sanitizeScoreConfig reads it back). */
+export function serializeScoreConfig(c: ScoreConfig): unknown {
+  return JSON.parse(JSON.stringify(c, (_k, v) => (v === Infinity ? null : v)))
+}
 
 export type Tier = "good" | "medium" | "low" | "none"
-export type PartKey = keyof typeof SCORE_CONFIG.weights
+export type PartKey = keyof ScoreConfig["weights"]
 export type ConfidenceLevel = "high" | "medium" | "low"
 
 export const TIER_LABEL: Record<Tier, string> = {
@@ -98,33 +225,33 @@ const clamp01 = (n: number) => Math.max(0, Math.min(1, n))
 
 export function tierOf(total: number | null): Tier {
   if (total === null) return "none"
-  if (total >= SCORE_CONFIG.tiers.good) return "good"
-  if (total >= SCORE_CONFIG.tiers.medium) return "medium"
+  if (total >= cfg().tiers.good) return "good"
+  if (total >= cfg().tiers.medium) return "medium"
   return "low"
 }
 
 // Rating pulled toward the prior by the number of reviews: 5.0 with 3 reviews is not 5.0.
 export function bayesianRating(rating: number, reviews: number | null): number {
-  const { priorMean, priorWeight } = SCORE_CONFIG.reputation
+  const { priorMean, priorWeight } = cfg().reputation
   if (reviews === null || reviews < 0) return rating
   return (reviews * rating + priorWeight * priorMean) / (reviews + priorWeight)
 }
 
 export function expectedEngagement(followers: number | null): number {
-  const tiers = SCORE_CONFIG.engagement.expectedByFollowers
+  const tiers = cfg().engagement.expectedByFollowers
   const f = followers ?? 20_000
   return tiers.find((t) => f <= t.upTo)!.expected
 }
 
 function recencyScore(days: number): number {
-  for (const step of SCORE_CONFIG.activity.recency) if (days <= step.days) return step.score
+  for (const step of cfg().activity.recency) if (days <= step.days) return step.score
   return 0
 }
 
 function reputationPart(e: Entity): number | null {
   const rating = e.place?.rating ?? null
   if (rating === null) return null
-  const c = SCORE_CONFIG.reputation
+  const c = cfg().reputation
   const reviews = e.place?.reviews ?? null
   const ratingScore = clamp01((bayesianRating(rating, reviews) - c.ratingFloor) / (5 - c.ratingFloor))
   const volumeScore = reviews !== null ? clamp01(Math.log10(reviews + 1) / Math.log10(c.volumeFull + 1)) : 0
@@ -173,7 +300,7 @@ function weightedMean(items: Array<{ w: number; v: number }>): number | null {
 }
 
 function channelEngagement(c: Channel): number | null {
-  const k = SCORE_CONFIG.engagement
+  const k = cfg().engagement
   const expected = expectedEngagement(c.followers) * k.networkFactor[c.network]
   const base = c.engagementRatePct != null ? 100 * clamp01(c.engagementRatePct / expected / k.fullRatio) : null
   const views =
@@ -183,7 +310,7 @@ function channelEngagement(c: Channel): number | null {
 }
 
 function channelActivity(c: Channel): number | null {
-  const k = SCORE_CONFIG.activity
+  const k = cfg().activity
   const freq = c.postsPerWeek != null ? 100 * clamp01(c.postsPerWeek / k.postsPerWeekFull) : null
   const rec = c.lastPostDaysAgo != null ? recencyScore(c.lastPostDaysAgo) : null
   if (freq !== null && rec !== null) return k.frequencyShare * freq + (1 - k.frequencyShare) * rec
@@ -218,12 +345,12 @@ export function totalFollowers(e: Entity): number | null {
 function audiencePart(e: Entity): number | null {
   const f = totalFollowers(e)
   if (f == null) return null
-  const a = SCORE_CONFIG.audience
+  const a = cfg().audience
   return 100 * clamp01((Math.log10(f) - Math.log10(a.followersFloor)) / (Math.log10(a.followersFull) - Math.log10(a.followersFloor)))
 }
 
 export function activeNetworks(e: Entity): ChannelNetwork[] {
-  const days = SCORE_CONFIG.presence.activeDays
+  const days = cfg().presence.activeDays
   return channelsOf(e)
     .filter((c) => c.lastPostDaysAgo != null && c.lastPostDaysAgo <= days)
     .map((c) => c.network)
@@ -231,7 +358,7 @@ export function activeNetworks(e: Entity): ChannelNetwork[] {
 
 function presencePart(e: Entity): number | null {
   if (!channelsOf(e).length) return null
-  return 100 * clamp01(activeNetworks(e).length / SCORE_CONFIG.presence.networksFull)
+  return 100 * clamp01(activeNetworks(e).length / cfg().presence.networksFull)
 }
 
 function partsFor(e: Entity): ScorePart[] {
@@ -248,7 +375,7 @@ function partsFor(e: Entity): ScorePart[] {
 function totalOf(parts: ScorePart[]): number | null {
   const have = parts.filter((p): p is { key: PartKey; score: number } => p.score !== null)
   if (have.length < 2) return null
-  const w = SCORE_CONFIG.weights
+  const w = cfg().weights
   const sum = have.reduce((a, p) => a + w[p.key] * p.score, 0)
   const weight = have.reduce((a, p) => a + w[p.key], 0)
   return Math.round(sum / weight)
@@ -256,10 +383,10 @@ function totalOf(parts: ScorePart[]): number | null {
 
 // Confidence = share of the weight that has data, reduced when every post sample is small.
 function confidenceOf(e: Entity, parts: ScorePart[]): Score["confidence"] {
-  const w = SCORE_CONFIG.weights
+  const w = cfg().weights
   const total = Object.values(w).reduce((a, b) => a + b, 0)
   const have = parts.filter((p) => p.score !== null).reduce((a, p) => a + w[p.key], 0)
-  const c = SCORE_CONFIG.confidence
+  const c = cfg().confidence
   const sampled = channelsOf(e).filter((ch) => ch.network !== "facebook")
   const sampleFactor = sampled.length && sampled.every((ch) => ch.postsSampled < c.minPostsSample) ? 0.7 : 1
   const value = (have / total) * sampleFactor
@@ -417,7 +544,7 @@ export function benchmarks(rows: Row[]): Benchmark[] {
     return {
       key: p.key,
       label: PART_LABEL[p.key],
-      weight: SCORE_CONFIG.weights[p.key],
+      weight: cfg().weights[p.key],
       you: youScore,
       avg: avgScore,
       rawLabel: p.rawLabel,

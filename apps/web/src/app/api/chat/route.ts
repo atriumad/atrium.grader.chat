@@ -5,13 +5,14 @@ import { BookingError, availableSlots, findFreeSlot, validateInput } from "@/lib
 import type { ChatEvent } from "@/lib/chat/types"
 import { chatSystemPrompt } from "@/lib/chat/prompt"
 import { liveGoogle, liveSocial, searchRanking, seoAudit } from "@/lib/chat/research"
-import { chatTools } from "@/lib/chat/tools"
-import { scoreAll } from "@/lib/metrics"
+import { chatToolsFor, toolEnabled } from "@/lib/chat/tools"
+import { getAgent, getScoring } from "@/lib/admin/config"
+import { logEvent } from "@/lib/admin/log"
+import { pinnedKnowledge, searchKnowledge } from "@/lib/admin/knowledge"
+import { activateScoring, scoreAll } from "@/lib/metrics"
 import { allow, clientKey } from "@/lib/rate-limit"
 
 export const maxDuration = 120
-
-const MAX_TOOL_ROUNDS = 8
 
 const STATUS: Record<string, string> = {
   get_live_social_stats: "Consultando redes sociales…",
@@ -54,6 +55,10 @@ export async function POST(req: Request) {
   }
   const body = (await req.json().catch(() => null)) as { messages?: unknown; dataset?: unknown; analysisText?: unknown } | null
   const messages = parseMessages(body?.messages)
+  // Score with the rules the user's analysis was made with; else the published ones.
+  const [scoring, agent, pinned] = await Promise.all([getScoring(), getAgent(), pinnedKnowledge()])
+  const ds = body?.dataset as { scoring?: unknown } | null | undefined
+  activateScoring(ds && typeof ds === "object" && ds.scoring ? ds.scoring : scoring.config)
   const data = parseDataset(body?.dataset)
   if (!messages || !data) return Response.json({ error: "Solicitud no válida." }, { status: 400 })
   const analysisText = typeof body?.analysisText === "string" ? body.analysisText : ""
@@ -63,7 +68,9 @@ export async function POST(req: Request) {
 
   const businessScore = scoreAll(data)[0].total
   const client = new Anthropic({ apiKey })
-  const system = chatSystemPrompt(data, analysisText)
+  const system = chatSystemPrompt(data, analysisText, { config: agent.config, pinned })
+  const tools = chatToolsFor(agent.config.tools)
+  logEvent("chat_message", { business: data.business.name.slice(0, 120) })
   const encoder = new TextEncoder()
 
   const stream = new ReadableStream({
@@ -72,7 +79,17 @@ export async function POST(req: Request) {
 
       // Runs one tool. Nothing here books anything: propose_booking only shows a card.
       const runTool = async (name: string, input: Record<string, unknown>): Promise<{ content: string; is_error?: boolean }> => {
+        if (!toolEnabled(name, agent.config.tools)) return { content: "Esa herramienta no está disponible.", is_error: true }
+        logEvent("tool_call", { tool: name })
         try {
+          if (name === "search_agency_knowledge") {
+            const q = String(input.query ?? "").trim()
+            if (q.length < 2) return { content: "Consulta vacía.", is_error: true }
+            send({ type: "status", text: "Buscando en el material de la agencia…" })
+            const hits = await searchKnowledge(q, 4)
+            if (!hits.length) return { content: "No hay material de la agencia sobre ese tema. No inventes: dilo con claridad." }
+            return { content: JSON.stringify(hits.map((h) => ({ documento: h.title, texto: h.content }))).slice(0, 8000) }
+          }
           if (name === "get_availability") {
             const part = input.part_of_day === "morning" || input.part_of_day === "afternoon" ? input.part_of_day : "any"
             const days = Number.isInteger(input.days_ahead) ? Math.min(14, Math.max(1, input.days_ahead as number)) : 14
@@ -115,6 +132,7 @@ export async function POST(req: Request) {
           return { content: `Herramienta desconocida: ${name}`, is_error: true }
         } catch (e) {
           if (name !== "get_availability" && name !== "propose_booking") {
+            logEvent("tool_error", { tool: name, error: e instanceof Error ? e.message.slice(0, 160) : "error" })
             return { content: `La consulta falló: ${e instanceof Error ? e.message : "error"}. Dilo con claridad y usa los datos del diagnóstico.`, is_error: true }
           }
           if (e instanceof BookingError) {
@@ -127,12 +145,12 @@ export async function POST(req: Request) {
 
       try {
         const convo: Anthropic.MessageParam[] = messages.map((m) => ({ role: m.role, content: m.content }))
-        for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+        for (let round = 0; round < agent.config.maxToolRounds; round++) {
           const s = client.messages.stream({
             model: process.env.ANTHROPIC_MODEL ?? "claude-sonnet-5-5",
             max_tokens: 1200,
             system,
-            tools: chatTools,
+            tools: tools.length ? tools : undefined,
             messages: convo,
           })
           for await (const event of s) {

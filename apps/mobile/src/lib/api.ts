@@ -21,7 +21,7 @@ export async function postJson(path: string, body: unknown, signal?: AbortSignal
   try {
     return await fetch(`${API_URL}${path}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "x-atrium-source": "mobile" },
       body: JSON.stringify(body),
       signal,
     })

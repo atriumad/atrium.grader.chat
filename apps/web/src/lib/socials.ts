@@ -77,9 +77,12 @@ export async function sc(path: string, params: Record<string, string>) {
     signal: AbortSignal.timeout(30_000),
   })
   if (!res.ok) throw new Error(`ScrapeCreators ${res.status} en ${path}`)
-  return res.json()
+  const json = await res.json()
+  if (typeof json?.credits_charged === "number") logEvent("credits", { path, charged: json.credits_charged, remaining: json.credits_remaining ?? null })
+  return json
 }
 
+import { logEvent } from "@/lib/admin/log"
 import type { InstagramStats } from "@atrium/shared/types"
 export type { InstagramStats }
 

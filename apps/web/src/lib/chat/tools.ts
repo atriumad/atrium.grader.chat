@@ -1,5 +1,7 @@
 import type Anthropic from "@anthropic-ai/sdk"
 
+import type { AgentConfig } from "@/lib/admin/config"
+
 export const chatTools: Anthropic.Tool[] = [
   {
     name: "get_availability",
@@ -67,4 +69,33 @@ export const chatTools: Anthropic.Tool[] = [
       required: ["query"],
     },
   },
+  {
+    name: "search_agency_knowledge",
+    description:
+      "Busca en el material que la agencia subió (servicios, casos de éxito, precios, guías, políticas) y devuelve los fragmentos más relevantes. Úsala para recomendar servicios, citar casos o responder cómo trabaja la agencia. Si no devuelve nada, no inventes: di que no tienes esa información.",
+    input_schema: {
+      type: "object",
+      properties: { query: { type: "string", description: "Qué buscar, en pocas palabras (ej. 'gestión de Instagram para restaurantes')." } },
+      required: ["query"],
+    },
+  },
 ]
+
+const GROUP: Record<string, keyof AgentConfig["tools"]> = {
+  get_availability: "booking",
+  propose_booking: "booking",
+  get_live_social_stats: "liveSocial",
+  get_live_google_reputation: "liveGoogle",
+  audit_website_seo: "seo",
+  check_google_ranking: "ranking",
+  search_agency_knowledge: "knowledge",
+}
+
+export function toolEnabled(name: string, tools: AgentConfig["tools"]): boolean {
+  const g = GROUP[name]
+  return g ? tools[g] : false
+}
+
+export function chatToolsFor(tools: AgentConfig["tools"]): Anthropic.Tool[] {
+  return chatTools.filter((t) => toolEnabled(t.name, tools))
+}

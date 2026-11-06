@@ -63,4 +63,6 @@ export type Dataset = {
   competitorsSource: string
   competitors: Entity[]
   generatedAt: string
+  // Scoring rules published in the admin panel when this was generated (JSON-safe).
+  scoring?: unknown
 }

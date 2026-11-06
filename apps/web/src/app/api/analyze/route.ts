@@ -10,6 +10,10 @@ import {
 } from "@/lib/socials"
 import { groupByAccount, groupNote, hasAccounts, type Grouped } from "@/lib/competitors"
 import { streamAnalysis, type Dataset, type Entity } from "@/lib/analysis"
+import { getAgent, getScoring } from "@/lib/admin/config"
+import { pinnedKnowledge } from "@/lib/admin/knowledge"
+import { logEvent, saveAnalysis } from "@/lib/admin/log"
+import { activateScoring, scoreAll, serializeScoreConfig } from "@/lib/metrics"
 
 export const maxDuration = 120
 
@@ -125,7 +129,11 @@ export async function POST(req: Request) {
   const stream = new ReadableStream({
     async start(controller) {
       const send = (e: Event) => controller.enqueue(encoder.encode(JSON.stringify(e) + "\n"))
+      const t0 = Date.now()
       try {
+        // Rules published in the admin panel (defaults if none or Supabase is down).
+        const [scoring, agent, pinned] = await Promise.all([getScoring(), getAgent(), pinnedKnowledge()])
+        activateScoring(scoring.config)
         const handle = parseInstagramInput(query)
         let data: Dataset
 
@@ -251,12 +259,25 @@ export async function POST(req: Request) {
           }
         }
 
+        if (scoring.custom) data.scoring = serializeScoreConfig(scoring.config)
         send({ type: "data", data })
         send({ type: "status", text: "Analizando los datos..." })
-        for await (const chunk of streamAnalysis(data)) {
+        for await (const chunk of streamAnalysis(data, {
+          tone: agent.config.tone,
+          instructions: agent.config.analysisInstructions,
+          knowledge: pinned,
+        })) {
           send({ type: "text", text: chunk })
         }
+        saveAnalysis({
+          query,
+          data,
+          score: scoreAll(data)[0]?.total ?? null,
+          source: req.headers.get("x-atrium-source") === "mobile" ? "mobile" : "web",
+          durationMs: Date.now() - t0,
+        })
       } catch (e) {
+        logEvent("analysis_error", { query: query.slice(0, 120), error: errMsg(e).slice(0, 200) })
         send({ type: "error", text: errMsg(e) })
       } finally {
         controller.close()

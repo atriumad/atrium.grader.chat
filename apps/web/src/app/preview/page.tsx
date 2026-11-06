@@ -30,7 +30,7 @@ import { SlotChips } from "@/components/chat/slot-chips"
 import { Choices } from "@/components/results/choices"
 import type { Dataset } from "@/lib/analysis"
 import type { ChatEvent, Proposal, Slot } from "@/lib/chat/types"
-import { scoreAll } from "@/lib/metrics"
+import { activateScoring, scoreAll } from "@/lib/metrics"
 import type { Place } from "@/lib/places"
 
 type AssistantTurn = {
@@ -218,6 +218,7 @@ export default function PreviewPage() {
               steps: t.steps[t.steps.length - 1] === evt.text ? t.steps : [...t.steps.filter((s) => s !== "Empezando…"), evt.text],
             }))
           } else if (evt.type === "data") {
+            activateScoring(evt.data.scoring)
             patch(assistantId, () => ({ data: evt.data }))
           } else if (evt.type === "text") {
             acc += evt.text
