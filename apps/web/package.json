@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@atrium/shared": "*",
     "@anthropic-ai/sdk": "^1.5.0",
     "@base-ui/react": "^1.9.0",
     "@shadcn/react": "^0.3.1",

@@ -1,17 +1,7 @@
 // Google Places API (New): find the business and its local competitors.
 
-export type Place = {
-  id: string
-  name: string
-  address: string
-  lat: number
-  lng: number
-  rating: number | null
-  reviews: number | null
-  website: string | null
-  primaryType: string | null
-  mapsUrl: string | null
-}
+import type { Place } from "@atrium/shared/types"
+export type { Place }
 
 type RawPlace = {
   id: string

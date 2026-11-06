@@ -4,24 +4,8 @@ import type { InstagramStats } from "./socials"
 import { streamViaClaudeCli } from "./claude-cli"
 import { CONFIDENCE_LABEL, SCORE_CONFIG, TIER_LABEL, scoreAll } from "./metrics"
 
-export type Entity = {
-  name: string
-  // Google Places data. null when the business has no confirmed Google listing.
-  place: Place | null
-  instagram: InstagramStats | null
-  instagramNote: string
-}
-
-export type Dataset = {
-  // How the business was identified, so the analysis can state it.
-  mode: "instagram_handle" | "business_name"
-  queried: string
-  identification: string
-  business: Entity
-  competitorsSource: string
-  competitors: Entity[]
-  generatedAt: string
-}
+import type { Dataset, Entity } from "@atrium/shared/types"
+export type { Dataset, Entity }
 
 const SYSTEM = `Eres el analista de marketing de una agencia que trabaja con restaurantes.
 Recibes datos reales de un negocio y de sus competidores locales: Google (rating, reseñas) e Instagram (seguidores, engagement, frecuencia de publicación).

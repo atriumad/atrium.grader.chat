@@ -40,20 +40,8 @@ async function sc(path: string, params: Record<string, string>) {
   return res.json()
 }
 
-export type InstagramStats = {
-  handle: string
-  followers: number | null
-  totalPosts: number | null
-  category: string | null
-  verified: boolean | null
-  postsSampled: number
-  avgLikes: number | null
-  avgComments: number | null
-  avgViews: number | null
-  engagementRatePct: number | null
-  postsPerWeek: number | null
-  lastPostDaysAgo: number | null
-}
+import type { InstagramStats } from "@atrium/shared/types"
+export type { InstagramStats }
 
 function avg(nums: number[]): number | null {
   return nums.length ? Math.round(nums.reduce((a, b) => a + b, 0) / nums.length) : null

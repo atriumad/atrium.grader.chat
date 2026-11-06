@@ -1,17 +1,10 @@
-// Follow-up chat and booking. Types copied from the web app (src/lib/chat/types.ts).
+// Follow-up chat and booking client.
 import { httpError, postJson } from "./api"
 import { readNdjson } from "./ndjson"
 import type { Dataset } from "./types"
 
-export type Slot = { start: string; end: string; label: string }
-export type Proposal = { start: string; label: string; name: string; email: string; phone: string; notes: string }
-export type ChatEvent =
-  | { type: "text"; text: string }
-  | { type: "slots"; slots: Slot[] }
-  | { type: "proposal"; proposal: Proposal }
-  | { type: "error"; text: string }
-
-export type ChatMessage = { role: "user" | "assistant"; content: string }
+import type { ChatEvent, ChatMessage } from "@atrium/shared/chat"
+export type { ChatEvent, ChatMessage, Slot, Proposal } from "@atrium/shared/chat"
 
 export async function* chat(
   body: { messages: ChatMessage[]; dataset: Dataset; analysisText: string },
