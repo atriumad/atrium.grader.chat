@@ -1,0 +1,13 @@
+node_modules/
+.next/
+.expo/
+.turbo/
+dist/
+*.tsbuildinfo
+.DS_Store
+.env*
+!.env.example
+.data/
+.vercel
+/ios
+/android

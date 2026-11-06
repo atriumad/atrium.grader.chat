@@ -1,0 +1,16 @@
+{
+  "name": "atrium-apps",
+  "private": true,
+  "workspaces": ["apps/*", "packages/*"],
+  "packageManager": "npm@11.14.1",
+  "scripts": {
+    "dev:web": "turbo run dev --filter=@atrium/web",
+    "dev:mobile": "turbo run start --filter=@atrium/mobile",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.0"
+  }
+}
