@@ -29,4 +29,42 @@ export const chatTools: Anthropic.Tool[] = [
       required: ["slot_start", "name", "email"],
     },
   },
+  {
+    name: "get_live_social_stats",
+    description:
+      "Consulta EN VIVO los números de una red social de un negocio (seguidores, engagement, frecuencia, último post) y los compara con lo que tenía el diagnóstico. Úsala para verificar cifras o cuando pregunten por una red concreta. Cuesta una consulta externa: no la repitas sin necesidad.",
+    input_schema: {
+      type: "object",
+      properties: {
+        network: { type: "string", enum: ["instagram", "facebook", "tiktok", "youtube"] },
+        business: { type: "string", description: "Nombre (o parte) del negocio o competidor. Si se omite, el negocio analizado." },
+        handle_or_url: { type: "string", description: "Solo si no está en el diagnóstico: usuario (IG/TikTok) o URL (Facebook/YouTube)." },
+      },
+      required: ["network"],
+    },
+  },
+  {
+    name: "get_live_google_reputation",
+    description: "Consulta en vivo la ficha de Google Maps del negocio o de un competidor: rating, número de reseñas y sitio web, comparado con el diagnóstico.",
+    input_schema: { type: "object", properties: { business: { type: "string", description: "Nombre del negocio o competidor. Por defecto el analizado." } } },
+  },
+  {
+    name: "audit_website_seo",
+    description:
+      "Revisa el SEO básico de la portada del sitio web de un negocio del diagnóstico: title, meta descripción, H1, datos estructurados de restaurante, móvil, sitemap, robots, velocidad de respuesta y contenido. Solo funciona con sitios del diagnóstico.",
+    input_schema: { type: "object", properties: { business: { type: "string", description: "Nombre del negocio o competidor. Por defecto el analizado." } } },
+  },
+  {
+    name: "check_google_ranking",
+    description:
+      "Busca en Google una consulta (ej. 'restaurante mexicano en Portland') y dice en qué posición orgánica aparece el sitio del negocio y qué competidores salen. No incluye el mapa local. Cuesta una consulta externa.",
+    input_schema: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: "Lo que buscaría un cliente, con ciudad." },
+        business: { type: "string", description: "Negocio a localizar. Por defecto el analizado." },
+      },
+      required: ["query"],
+    },
+  },
 ]

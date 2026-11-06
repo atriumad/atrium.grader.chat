@@ -68,7 +68,7 @@ export async function findInstagramHandle(website: string | null): Promise<strin
   return (await findSocialLinks(website)).instagram
 }
 
-async function sc(path: string, params: Record<string, string>) {
+export async function sc(path: string, params: Record<string, string>) {
   const key = process.env.SCRAPECREATORS_API_KEY
   if (!key) throw new Error("Falta SCRAPECREATORS_API_KEY")
   const url = `${BASE}${path}?${new URLSearchParams(params)}`

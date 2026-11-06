@@ -5,5 +5,6 @@ export type ChatEvent =
   | { type: "text"; text: string }
   | { type: "slots"; slots: Slot[] }
   | { type: "proposal"; proposal: Proposal }
+  | { type: "status"; text: string }
   | { type: "error"; text: string }
 export type ChatMessage = { role: "user" | "assistant"; content: string }

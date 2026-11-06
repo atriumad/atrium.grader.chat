@@ -4,13 +4,21 @@ import type { Dataset } from "@/lib/analysis"
 import { BookingError, availableSlots, findFreeSlot, validateInput } from "@/lib/booking"
 import type { ChatEvent } from "@/lib/chat/types"
 import { chatSystemPrompt } from "@/lib/chat/prompt"
+import { liveGoogle, liveSocial, searchRanking, seoAudit } from "@/lib/chat/research"
 import { chatTools } from "@/lib/chat/tools"
 import { scoreAll } from "@/lib/metrics"
 import { allow, clientKey } from "@/lib/rate-limit"
 
 export const maxDuration = 120
 
-const MAX_TOOL_ROUNDS = 5
+const MAX_TOOL_ROUNDS = 8
+
+const STATUS: Record<string, string> = {
+  get_live_social_stats: "Consultando redes sociales…",
+  get_live_google_reputation: "Consultando Google Maps…",
+  audit_website_seo: "Revisando el sitio web…",
+  check_google_ranking: "Buscando en Google…",
+}
 
 type Event = ChatEvent
 
@@ -99,8 +107,16 @@ export async function POST(req: Request) {
                 "Tarjeta mostrada al usuario. La reunión NO está agendada: falta que él pulse Confirmar. Dile que revise los datos y confirme; no digas que ya está reservada.",
             }
           }
+          if (name === "get_live_social_stats" || name === "get_live_google_reputation" || name === "audit_website_seo" || name === "check_google_ranking") {
+            const run = { get_live_social_stats: liveSocial, get_live_google_reputation: liveGoogle, audit_website_seo: seoAudit, check_google_ranking: searchRanking }[name]
+            send({ type: "status", text: STATUS[name] })
+            return { content: JSON.stringify(await run(data, input)).slice(0, 12_000) }
+          }
           return { content: `Herramienta desconocida: ${name}`, is_error: true }
         } catch (e) {
+          if (name !== "get_availability" && name !== "propose_booking") {
+            return { content: `La consulta falló: ${e instanceof Error ? e.message : "error"}. Dilo con claridad y usa los datos del diagnóstico.`, is_error: true }
+          }
           if (e instanceof BookingError) {
             const msg = e.code === "not_configured" ? "La agenda no está configurada en el servidor todavía." : e.message
             return { content: msg, is_error: true }

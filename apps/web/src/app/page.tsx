@@ -133,6 +133,8 @@ export default function Page() {
             acc += evt.text
             setStatus("streaming")
             patchChat(chatId, () => ({ text: acc }))
+          } else if (evt.type === "status") {
+            if (!acc) patchChat(chatId, () => ({ text: evt.text }))
           } else if (evt.type === "slots") {
             patchChat(chatId, () => ({ slots: evt.slots }))
           } else if (evt.type === "proposal") {

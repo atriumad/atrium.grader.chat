@@ -177,6 +177,8 @@ export default function Home() {
         for await (const evt of chat({ messages: history, dataset: report.data, analysisText: report.text }, controller.signal)) {
           if (evt.type === "text") {
             pacer.push(evt.text)
+          } else if (evt.type === "status") {
+            if (!pacer.text) patchChat(id, () => ({ text: evt.text }))
           } else if (evt.type === "slots") {
             patchChat(id, () => ({ slots: evt.slots }))
             setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 120)
