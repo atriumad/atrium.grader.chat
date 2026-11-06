@@ -35,7 +35,7 @@ export function parseSocialLinks(html: string): SocialLinks {
   }
   for (const m of html.matchAll(/facebook\.com\/(profile\.php\?id=\d+|(?:pages\/[^/"'\s<>?#]+\/)?[A-Za-z0-9.\-]{3,})/gi)) {
     const first = m[1].split("/")[0].toLowerCase()
-    if (!FB_RESERVED.has(first)) {
+    if (!FB_RESERVED.has(first) && (/[A-Za-z]/.test(m[1]) || m[1].startsWith("profile.php"))) {
       links.facebook = `https://www.facebook.com/${m[1]}`
       break
     }
@@ -193,6 +193,9 @@ export async function getInstagramSnapshot(
 // Facebook, TikTok, YouTube. Same idea as Instagram: profile + a sample of recent posts.
 // ---------------------------------------------------------------------------
 
+const MIN_SPAN_DAYS = 3
+const MAX_POSTS_PER_WEEK = 21
+
 type PostSample = { likes: number | null; comments: number | null; views: number | null; time: number | null } // time: unix seconds
 
 function summarize(
@@ -218,7 +221,8 @@ function summarize(
   let postsPerWeek: number | null = null
   if (times.length >= 2) {
     const spanDays = (times[0] - times[times.length - 1]) / 86_400
-    postsPerWeek = spanDays > 0 ? Math.round(((times.length - 1) / spanDays) * 7 * 10) / 10 : null
+    // A tight burst (3 posts the same day) says nothing about frequency; cap what is left.
+    postsPerWeek = spanDays >= MIN_SPAN_DAYS ? Math.min(MAX_POSTS_PER_WEEK, Math.round(((times.length - 1) / spanDays) * 7 * 10) / 10) : null
   }
   return {
     network,
@@ -309,6 +313,12 @@ function youtubeRef(url: string): Record<string, string> {
   return { handle: path.split("/").pop() ?? path }
 }
 
+// A tiny channel whose last post is over a year old is not the business's channel (a
+// chef's personal account linked from the site) or is dead: it should not count either way.
+function isAbandoned(n: NetworkStats): boolean {
+  return (n.followers ?? 0) < 100 && n.lastPostDaysAgo !== null && n.lastPostDaysAgo > 365
+}
+
 // Reads every network that was found on the website and is enabled (SOCIAL_NETWORKS).
 // A failing network is skipped and reported in `note`; it never breaks the analysis.
 export async function getNetworkStats(
@@ -323,8 +333,10 @@ export async function getNetworkStats(
   const networks: NetworkStats[] = []
   const failed: string[] = []
   results.forEach((r, i) => {
-    if (r.status === "fulfilled") networks.push(r.value)
-    else failed.push(`${jobs[i].name} no disponible`)
+    if (r.status === "rejected") failed.push(`${jobs[i].name} no disponible`)
+    else if (r.value.postsSampled === 0) failed.push(`${jobs[i].name} sin posts visibles`)
+    else if (isAbandoned(r.value)) failed.push(`${jobs[i].name} (${r.value.handle}) parece abandonado o no es la cuenta del negocio`)
+    else networks.push(r.value)
   })
   return { networks, note: failed.length ? failed.join("; ") : undefined }
 }
