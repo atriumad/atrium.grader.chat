@@ -192,9 +192,12 @@ function ScorePanel({ you, total, avg, bench }: { you: Row; total: number; avg: 
 export function Report({
   data,
   children,
+  evidence = true,
 }: {
   data: Dataset
   children?: React.ReactNode
+  // Map and ranking appear (with a reveal) only once the written analysis is done.
+  evidence?: boolean
 }) {
   const rows = React.useMemo(() => toRows(data), [data])
   const bench = React.useMemo(() => benchmarks(rows), [rows])
@@ -216,17 +219,20 @@ export function Report({
 
       {children}
 
-      {showMap ? (
-        <div className="overflow-hidden rounded-2xl border bg-card">
+      {evidence && showMap ? (
+        <div className="reveal-clip overflow-hidden rounded-2xl border bg-card">
           <h3 className="border-b px-4 py-3 text-sm font-medium sm:px-5">Dónde compites</h3>
-          <CompetitorMap points={points} radiusMeters={COMPETITOR_RADIUS_M} activeKey={active} onActive={setActive} />
+          <div className="reveal-settle">
+            <CompetitorMap points={points} radiusMeters={COMPETITOR_RADIUS_M} activeKey={active} onActive={setActive} />
+          </div>
           <p className="border-t px-4 py-2.5 text-xs text-muted-foreground sm:px-5">
             Halo = puntaje · tamaño = audiencia total en redes. Pulsa un pin para el detalle.
           </p>
         </div>
       ) : null}
 
-      <div className="overflow-hidden rounded-2xl border bg-card">
+      {evidence ? (
+      <div className="reveal-rise overflow-hidden rounded-2xl border bg-card" style={{ "--d": showMap ? "260ms" : "0ms" } as React.CSSProperties}>
         <h3 className="border-b px-4 py-3 text-sm font-medium sm:px-5">Ranking de tu zona</h3>
         <div className="overflow-x-auto">
           <table className="w-full sm:min-w-[560px] border-collapse text-sm">
@@ -240,12 +246,13 @@ export function Report({
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => (
+              {rows.map((r, i) => (
                 <tr
                   key={r.key}
+                  style={{ "--i": i } as React.CSSProperties}
                   onMouseEnter={() => setActive(r.key)}
                   onMouseLeave={() => setActive(null)}
-                  className={`border-t align-middle transition-colors ${active === r.key ? "bg-secondary" : r.isYou ? "bg-secondary/60" : ""}`}
+                  className={`row-in border-t align-middle transition-colors ${active === r.key ? "bg-secondary" : r.isYou ? "bg-secondary/60" : ""}`}
                 >
                   <td className="w-10 py-3 pl-4 sm:w-12 sm:pl-5">
                     <span
@@ -275,7 +282,7 @@ export function Report({
                     ) : (
                       <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2.5">
                         <span className="w-7 shrink-0 font-medium tnum">{r.score}</span>
-                        <Meter value={r.score} color={TIER_VAR[r.tier]} />
+                        <Meter value={r.score} color={TIER_VAR[r.tier]} delay={(showMap ? 420 : 160) + i * 50} />
                       </div>
                     )}
                   </td>
@@ -290,6 +297,7 @@ export function Report({
           Competencia: {data.competitorsSource} · Redes: últimos posts públicos.
         </p>
       </div>
+      ) : null}
     </section>
   )
 }

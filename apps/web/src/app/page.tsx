@@ -358,7 +358,7 @@ export default function Page() {
                                 />
                               ) : turn.data ? (
                                 // The written analysis sits inside the report, right after the score.
-                                <Report data={turn.data}>
+                                <Report data={turn.data} evidence={!turn.streaming}>
                                   {turn.error ? (
                                     <p role="alert" className="max-w-[65ch] text-base/relaxed text-destructive">
                                       {turn.text}
