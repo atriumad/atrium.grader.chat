@@ -1,3 +1,5 @@
+import { connection } from "next/server"
+
 import { Card, PageHeader, Stat } from "@/components/admin/ui"
 import { db } from "@/lib/supabase/server"
 
@@ -52,6 +54,7 @@ function Bars({ data }: { data: Overview["daily"] }) {
 }
 
 export default async function Overview() {
+  await connection() // read the database per request, never at build time
   const [ov, recent] = await Promise.all([
     db().rpc("admin_overview"),
     db().from("analyses").select("id, created_at, business_name, query, score, competitors, source, duration_ms").order("created_at", { ascending: false }).limit(15),

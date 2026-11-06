@@ -1,3 +1,5 @@
+import { connection } from "next/server"
+
 import { PageHeader } from "@/components/admin/ui"
 import { ScoringEditor } from "@/components/admin/scoring-editor"
 import { configHistory, getScoring } from "@/lib/admin/config"
@@ -5,6 +7,7 @@ import { DEFAULT_SCORE_CONFIG, serializeScoreConfig } from "@/lib/metrics"
 import { db } from "@/lib/supabase/server"
 
 export default async function ScoringPage() {
+  await connection() // read the database per request, never at build time
   const [cur, history, samples] = await Promise.all([
     getScoring(true),
     configHistory("scoring"),

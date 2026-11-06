@@ -1,8 +1,11 @@
+import { connection } from "next/server"
+
 import { KnowledgeManager } from "@/components/admin/knowledge-manager"
 import { PageHeader } from "@/components/admin/ui"
 import { listDocs } from "@/lib/admin/knowledge"
 
 export default async function KnowledgePage() {
+  await connection() // read the database per request, never at build time
   const docs = await listDocs().catch(() => [])
   return (
     <>

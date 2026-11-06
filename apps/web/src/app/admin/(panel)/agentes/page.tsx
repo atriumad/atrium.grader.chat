@@ -1,8 +1,11 @@
+import { connection } from "next/server"
+
 import { AgentEditor } from "@/components/admin/agent-editor"
 import { PageHeader } from "@/components/admin/ui"
 import { configHistory, getAgent } from "@/lib/admin/config"
 
 export default async function AgentsPage() {
+  await connection() // read the database per request, never at build time
   const [cur, history] = await Promise.all([getAgent(true), configHistory("agent")])
   return (
     <>

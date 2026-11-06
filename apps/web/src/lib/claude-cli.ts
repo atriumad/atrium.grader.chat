@@ -40,7 +40,7 @@ export async function* streamViaClaudeCli(opts: {
     "--no-session-persistence",
   ]
 
-  const child = spawn(process.env.CLAUDE_BIN ?? "claude", args, {
+  const child = spawn(/*turbopackIgnore: true*/ process.env.CLAUDE_BIN ?? "claude", args, {
     cwd,
     env,
     stdio: ["pipe", "pipe", "pipe"],

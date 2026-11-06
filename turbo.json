@@ -1,10 +1,55 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "tasks": {
-    "build": { "dependsOn": ["^build"], "outputs": [".next/**", "!.next/cache/**", "dist/**"] },
-    "dev": { "cache": false, "persistent": true },
-    "start": { "cache": false, "persistent": true },
+    "build": {
+      "dependsOn": [
+        "^build"
+      ],
+      "outputs": [
+        ".next/**",
+        "!.next/cache/**",
+        "dist/**"
+      ]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "start": {
+      "cache": false,
+      "persistent": true
+    },
     "lint": {},
-    "typecheck": { "dependsOn": ["^typecheck"] }
-  }
+    "typecheck": {
+      "dependsOn": [
+        "^typecheck"
+      ]
+    }
+  },
+  "globalEnv": [
+    "NEXT_PUBLIC_SUPABASE_URL",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY"
+  ],
+  "globalPassThroughEnv": [
+    "GOOGLE_PLACES_API_KEY",
+    "SCRAPECREATORS_API_KEY",
+    "ANTHROPIC_API_KEY",
+    "ANTHROPIC_MODEL",
+    "ANALYSIS_PROVIDER",
+    "SOCIAL_NETWORKS",
+    "BOOKING_PROVIDER",
+    "BOOKING_HOURS",
+    "BOOKING_DAYS",
+    "BOOKING_TIMEZONE",
+    "BOOKING_DURATION_MIN",
+    "BOOKING_MIN_NOTICE_HOURS",
+    "BOOKING_HORIZON_DAYS",
+    "GOOGLE_CLIENT_ID",
+    "GOOGLE_CLIENT_SECRET",
+    "GOOGLE_REFRESH_TOKEN",
+    "GOOGLE_CALENDAR_ID",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "ADMIN_EMAILS",
+    "CLAUDE_BIN"
+  ]
 }
