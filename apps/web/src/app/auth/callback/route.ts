@@ -1,15 +1,17 @@
 import { NextResponse } from "next/server"
 
 import { createAuthClient } from "@/lib/supabase/auth"
+import { originOf } from "@/lib/supabase/origin"
 import { authConfigured } from "@/lib/supabase/server"
 
 // Magic-link landing: swaps the code for a session cookie, then goes to the panel.
 export async function GET(req: Request) {
   const url = new URL(req.url)
+  const origin = originOf(req)
   const code = url.searchParams.get("code")
   if (code && authConfigured()) {
     const { error } = await (await createAuthClient()).auth.exchangeCodeForSession(code)
-    if (!error) return NextResponse.redirect(new URL("/admin", url.origin))
+    if (!error) return NextResponse.redirect(new URL("/admin", origin))
   }
-  return NextResponse.redirect(new URL("/admin/login?error=link", url.origin))
+  return NextResponse.redirect(new URL("/admin/login?error=link", origin))
 }
