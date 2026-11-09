@@ -17,6 +17,7 @@ export async function POST(req: Request) {
     const origin = originOf(req)
     const supabase = await createAuthClient()
     const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: `${origin}/auth/callback` } })
+    if (error) console.error("[admin/login] signInWithOtp failed:", error.status, error.code, error.message)
     if (error) return Response.json({ error: "No se pudo enviar el enlace. Intenta de nuevo en unos minutos." }, { status: 502 })
   }
   return Response.json({ ok: true })
