@@ -10,6 +10,7 @@ const ITEMS = [
   { href: "/admin/scoring", label: "Puntaje" },
   { href: "/admin/agentes", label: "Agentes" },
   { href: "/admin/conocimiento", label: "Conocimiento" },
+  { href: "/admin/busquedas", label: "Búsquedas" },
 ]
 
 export function AdminNav({ email }: { email: string }) {

@@ -50,16 +50,30 @@ export function parseSocialLinks(html: string): SocialLinks {
 // One fetch of the business website finds every social link on it.
 export async function findSocialLinks(website: string | null): Promise<SocialLinks> {
   const none: SocialLinks = { instagram: null, facebook: null, tiktok: null, youtube: null }
-  if (!website) return none
+  if (!website) {
+    logLookup({ kind: "links", target: null, ok: false, summary: { reason: "sin sitio web" } })
+    return none
+  }
+  const t0 = Date.now()
   try {
     const res = await fetch(website, {
       signal: AbortSignal.timeout(6_000),
       headers: { "User-Agent": "Mozilla/5.0 (compatible; AtriumGrader/0.1)" },
       redirect: "follow",
     })
-    if (!res.ok) return none
-    return parseSocialLinks((await res.text()).slice(0, 500_000))
-  } catch {
+    if (!res.ok) {
+      logLookup({ kind: "links", target: website, ok: false, status: res.status, durationMs: Date.now() - t0, summary: { reason: `el sitio respondió ${res.status}` } })
+      return none
+    }
+    const html = (await res.text()).slice(0, 500_000)
+    const links = parseSocialLinks(html)
+    logLookup({
+      kind: "links", target: website, ok: true, status: res.status, durationMs: Date.now() - t0,
+      summary: { finalUrl: res.url, htmlKB: Math.round(html.length / 1024), links },
+    })
+    return links
+  } catch (e) {
+    logLookup({ kind: "links", target: website, ok: false, durationMs: Date.now() - t0, error: e instanceof Error ? e.message : String(e), summary: { reason: "sitio inaccesible o bloqueado" } })
     return none // website unreachable or blocked: no links
   }
 }
@@ -72,17 +86,36 @@ export async function sc(path: string, params: Record<string, string>) {
   const key = process.env.SCRAPECREATORS_API_KEY
   if (!key) throw new Error("Falta SCRAPECREATORS_API_KEY")
   const url = `${BASE}${path}?${new URLSearchParams(params)}`
-  const res = await fetch(url, {
-    headers: { "x-api-key": key },
-    signal: AbortSignal.timeout(30_000),
-  })
-  if (!res.ok) throw new Error(`ScrapeCreators ${res.status} en ${path}`)
-  const json = await res.json()
-  if (typeof json?.credits_charged === "number") logEvent("credits", { path, charged: json.credits_charged, remaining: json.credits_remaining ?? null })
-  return json
+  const target = params.handle ?? params.url ?? params.query ?? null
+  const t0 = Date.now()
+  let status: number | null = null
+  try {
+    const res = await fetch(url, {
+      headers: { "x-api-key": key },
+      signal: AbortSignal.timeout(30_000),
+    })
+    status = res.status
+    const text = await res.text()
+    if (!res.ok) throw new Error(`ScrapeCreators ${res.status} en ${path}`, { cause: text })
+    const json = JSON.parse(text)
+    if (typeof json?.credits_charged === "number") logEvent("credits", { path, charged: json.credits_charged, remaining: json.credits_remaining ?? null })
+    logLookup({
+      kind: "scrape", target, request: { path, params }, ok: true, status, durationMs: Date.now() - t0,
+      summary: { credits: json?.credits_charged ?? null, keys: Object.keys(json ?? {}).slice(0, 12) },
+      response: text,
+    })
+    return json
+  } catch (e) {
+    const err = e as Error & { cause?: unknown }
+    logLookup({
+      kind: "scrape", target, request: { path, params }, ok: false, status, durationMs: Date.now() - t0,
+      error: err.message, response: typeof err.cause === "string" ? err.cause : null,
+    })
+    throw e
+  }
 }
 
-import { logEvent } from "@/lib/admin/log"
+import { logEvent, logLookup } from "@/lib/admin/log"
 import type { InstagramStats } from "@atrium/shared/types"
 export type { InstagramStats }
 
@@ -189,6 +222,10 @@ export async function getInstagramSnapshot(
       .map((n) => n.username),
   }
 
+  logLookup({
+    kind: "network", target: `Instagram: @${handle}`, ok: followers !== null,
+    summary: { resultado: followers !== null ? "leída" : "sin seguidores en la respuesta", ...stats },
+  })
   return { stats, extras }
 }
 
@@ -328,18 +365,30 @@ export async function getNetworkStats(
   links: SocialLinks
 ): Promise<{ networks: NetworkStats[]; note: string | undefined }> {
   const on = NETWORKS_ON()
-  const jobs: Array<{ name: string; run: () => Promise<NetworkStats> }> = []
-  if (on.has("facebook") && links.facebook) jobs.push({ name: "Facebook", run: () => getFacebookStats(links.facebook!) })
-  if (on.has("tiktok") && links.tiktok) jobs.push({ name: "TikTok", run: () => getTikTokStats(links.tiktok!) })
-  if (on.has("youtube") && links.youtube) jobs.push({ name: "YouTube", run: () => getYouTubeStats(links.youtube!) })
+  const jobs: Array<{ name: string; target: string; run: () => Promise<NetworkStats> }> = []
+  if (on.has("facebook") && links.facebook) jobs.push({ name: "Facebook", target: links.facebook, run: () => getFacebookStats(links.facebook!) })
+  if (on.has("tiktok") && links.tiktok) jobs.push({ name: "TikTok", target: links.tiktok, run: () => getTikTokStats(links.tiktok!) })
+  if (on.has("youtube") && links.youtube) jobs.push({ name: "YouTube", target: links.youtube, run: () => getYouTubeStats(links.youtube!) })
   const results = await Promise.allSettled(jobs.map((j) => j.run()))
   const networks: NetworkStats[] = []
   const failed: string[] = []
   results.forEach((r, i) => {
-    if (r.status === "rejected") failed.push(`${jobs[i].name} no disponible`)
-    else if (r.value.postsSampled === 0) failed.push(`${jobs[i].name} sin posts visibles`)
-    else if (isAbandoned(r.value)) failed.push(`${jobs[i].name} (${r.value.handle}) parece abandonado o no es la cuenta del negocio`)
-    else networks.push(r.value)
+    const name = jobs[i].name
+    const log = (ok: boolean, summary: unknown, error?: string) =>
+      logLookup({ kind: "network", target: `${name}: ${jobs[i].target}`, ok, summary, error })
+    if (r.status === "rejected") {
+      failed.push(`${name} no disponible`)
+      log(false, { resultado: "falló la consulta" }, r.reason instanceof Error ? r.reason.message : String(r.reason))
+    } else if (r.value.postsSampled === 0) {
+      failed.push(`${name} sin posts visibles`)
+      log(false, { resultado: "descartada: sin posts visibles", ...r.value })
+    } else if (isAbandoned(r.value)) {
+      failed.push(`${name} (${r.value.handle}) parece abandonado o no es la cuenta del negocio`)
+      log(false, { resultado: "descartada: abandonada o no es del negocio", ...r.value })
+    } else {
+      networks.push(r.value)
+      log(true, { resultado: "usada en el diagnóstico", ...r.value })
+    }
   })
   return { networks, note: failed.length ? failed.join("; ") : undefined }
 }
