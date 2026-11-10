@@ -1,6 +1,7 @@
 // Social data: find handles on a business website, then pull public metrics
 // through ScrapeCreators for Instagram, Facebook, TikTok and YouTube.
 import type { NetworkStats, Network } from "@atrium/shared/types"
+import { fuzzyEq, tokens } from "./match"
 
 const BASE = "https://api.scrapecreators.com"
 
@@ -48,7 +49,7 @@ export function parseSocialLinks(html: string): SocialLinks {
 }
 
 // One fetch of the business website finds every social link on it.
-export async function findSocialLinks(website: string | null): Promise<SocialLinks> {
+async function findSocialLinksOnce(website: string | null): Promise<SocialLinks> {
   const none: SocialLinks = { instagram: null, facebook: null, tiktok: null, youtube: null }
   if (!website) {
     logLookup({ kind: "links", target: null, ok: false, summary: { reason: "sin sitio web" } })
@@ -65,7 +66,7 @@ export async function findSocialLinks(website: string | null): Promise<SocialLin
       logLookup({ kind: "links", target: website, ok: false, status: res.status, durationMs: Date.now() - t0, summary: { reason: `el sitio respondió ${res.status}` } })
       return none
     }
-    const html = (await res.text()).slice(0, 500_000)
+    const html = (await res.text()).slice(0, 2_000_000)
     const links = parseSocialLinks(html)
     logLookup({
       kind: "links", target: website, ok: true, status: res.status, durationMs: Date.now() - t0,
@@ -76,6 +77,43 @@ export async function findSocialLinks(website: string | null): Promise<SocialLin
     logLookup({ kind: "links", target: website, ok: false, durationMs: Date.now() - t0, error: e instanceof Error ? e.message : String(e), summary: { reason: "sitio inaccesible o bloqueado" } })
     return none // website unreachable or blocked: no links
   }
+}
+
+// Fallback when the website has no Instagram link (blocked, subpage, JS-rendered):
+// a Google search for the business, accepted only if the profile result's title
+// contains every word of the business name.
+// Tries the given page; if it has no Instagram link and is a subpage ("/locations"),
+// tries the site's home page too.
+export async function findSocialLinks(website: string | null): Promise<SocialLinks> {
+  const links = await findSocialLinksOnce(website)
+  if (links.instagram || !website) return links
+  try {
+    const u = new URL(website.startsWith("http") ? website : `https://${website}`)
+    if (u.pathname.length > 1) {
+      const home = await findSocialLinksOnce(u.origin)
+      return { instagram: home.instagram, facebook: links.facebook ?? home.facebook, tiktok: links.tiktok ?? home.tiktok, youtube: links.youtube ?? home.youtube }
+    }
+  } catch {}
+  return links
+}
+
+export async function searchInstagramHandle(name: string, address: string): Promise<string | null> {
+  const city = address.split(",").slice(-3, -2)[0]?.trim() ?? ""
+  let data: { results?: { title?: string; url?: string }[] }
+  try {
+    data = await sc("/v1/google/search", { query: `${name} ${city} instagram`.trim(), country: "us", language: "en" })
+  } catch {
+    return null
+  }
+  const want = tokens(name)
+  if (!want.length) return null
+  for (const r of data.results ?? []) {
+    const m = r.url?.match(/^https?:\/\/(?:www\.)?instagram\.com\/([A-Za-z0-9._]{1,30})\/?(?:\?|$)/i)
+    if (!m || IG_RESERVED.has(m[1].toLowerCase())) continue
+    const title = tokens(`${r.title ?? ""} ${m[1]}`)
+    if (want.every((w) => title.some((t) => fuzzyEq(w, t)))) return m[1].replace(/\.$/, "")
+  }
+  return null
 }
 
 export async function findInstagramHandle(website: string | null): Promise<string | null> {

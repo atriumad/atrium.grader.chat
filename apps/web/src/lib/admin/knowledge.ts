@@ -112,12 +112,13 @@ export async function getDoc(id: string) {
   return data as { id: string; title: string; content: string } | null
 }
 
-const pinnedCache: { at: number; text: string } = { at: 0, text: "" }
+// `at` uses performance.now() (Next rejects Date.now() while prerendering); -Infinity = never loaded.
+const pinnedCache: { at: number; text: string } = { at: -Infinity, text: "" }
 
 // Documents flagged "siempre usar": injected whole (capped) into the prompts.
 export async function pinnedKnowledge(maxChars = 6000): Promise<string> {
   if (!supabaseConfigured()) return ""
-  if (Date.now() - pinnedCache.at < 30_000) return pinnedCache.text
+  if (performance.now() - pinnedCache.at < 30_000) return pinnedCache.text
   try {
     const { data } = await db().from("knowledge_docs").select("title, content").eq("pinned", true).eq("enabled", true).order("created_at")
     let out = ""
@@ -129,7 +130,7 @@ export async function pinnedKnowledge(maxChars = 6000): Promise<string> {
       }
       out += block
     }
-    pinnedCache.at = Date.now()
+    pinnedCache.at = performance.now()
     pinnedCache.text = out.trim()
   } catch {
     // keep the previous value

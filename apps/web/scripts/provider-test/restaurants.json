@@ -1,0 +1,79 @@
+[
+  {
+    "query": "Katz's Delicatessen New York",
+    "size": "grande",
+    "note": "famoso, muchas reseñas"
+  },
+  {
+    "query": "Franklin Barbecue Austin",
+    "size": "grande",
+    "note": "famoso, una sola sede"
+  },
+  {
+    "query": "Screen Door Portland",
+    "size": "mediano",
+    "note": "ejemplo del placeholder de la app"
+  },
+  {
+    "query": "Joe's Pizza Greenwich Village New York",
+    "size": "mediano",
+    "note": "nombre muy común: prueba ambigüedad"
+  },
+  {
+    "query": "Lou Malnati's Pizzeria Chicago",
+    "size": "mediano",
+    "note": "cadena local, varias sedes"
+  },
+  {
+    "query": "Pike Place Chowder Seattle",
+    "size": "mediano",
+    "note": "turístico"
+  },
+  {
+    "query": "Voodoo Doughnut Portland",
+    "size": "mediano",
+    "note": "marca fuerte en redes"
+  },
+  {
+    "query": "Cafe Du Monde New Orleans",
+    "size": "mediano",
+    "note": "ficha de Google muy cargada"
+  },
+  {
+    "query": "In-N-Out Burger Fisherman's Wharf San Francisco",
+    "size": "grande",
+    "note": "cadena: prueba agrupación de sedes"
+  },
+  {
+    "query": "Prince's Hot Chicken Nashville",
+    "size": "mediano",
+    "note": "poca presencia web esperada"
+  },
+  {
+    "query": "Old Shawnee Pizza",
+    "size": "pequeño",
+    "note": "cliente de la agencia",
+    "pick": "Shawnee, KS"
+  },
+  {
+    "query": "Taha Mexican Kitchen",
+    "size": "pequeño",
+    "note": "cliente de la agencia, sin ciudad en la consulta"
+  },
+  {
+    "query": "Taco Naco",
+    "size": "pequeño",
+    "note": "cliente de la agencia, sin ciudad en la consulta; sede esperada: Kansas",
+    "pick": "KS"
+  },
+  {
+    "query": "TODO restaurante hispano 1 (ciudad de habla hispana)",
+    "size": "pequeño",
+    "note": "prueba país/idioma hardcodeados"
+  },
+  {
+    "query": "TODO restaurante sin web ni Instagram conocido",
+    "size": "pequeño",
+    "note": "caso límite: pocos datos"
+  }
+]

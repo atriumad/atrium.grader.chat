@@ -1,3 +1,6 @@
+import { AsyncLocalStorage } from "node:async_hooks"
+import { randomUUID } from "node:crypto"
+
 import type { Dataset } from "@/lib/analysis"
 import { db, supabaseConfigured } from "@/lib/supabase/server"
 
@@ -42,14 +45,26 @@ export type LookupLog = {
 
 const RESPONSE_MAX = 8_000
 
+// Which analysis a lookup belongs to. The analyze route sets it once; every external lookup made
+// during that request is then tagged (in `request._ctx`) so the admin can group them by client.
+export type LookupContext = { run: string; query: string; business?: string }
+const lookupStore = new AsyncLocalStorage<LookupContext>()
+
+export function startLookupContext(query: string): LookupContext {
+  const ctx: LookupContext = { run: randomUUID(), query: query.slice(0, 200) }
+  lookupStore.enterWith(ctx)
+  return ctx
+}
+
 // What each external lookup returned, for the admin "Búsquedas" page. Fire-and-forget.
 export function logLookup(l: LookupLog): void {
   if (!supabaseConfigured()) return
+  const ctx = lookupStore.getStore()
   void Promise.resolve(
     db().from("lookup_logs").insert({
       kind: l.kind,
       target: l.target?.slice(0, 300) ?? null,
-      request: l.request ?? {},
+      request: ctx ? { ...(l.request ?? {}), _ctx: { run: ctx.run, query: ctx.query, business: ctx.business ?? null } } : (l.request ?? {}),
       ok: l.ok,
       status: l.status ?? null,
       duration_ms: l.durationMs ?? null,

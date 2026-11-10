@@ -2,6 +2,7 @@ import { findBusiness, findCandidates, findCompetitors, getPlace, type Place } f
 import { decide } from "@/lib/match"
 import {
   findSocialLinks,
+  searchInstagramHandle,
   getNetworkStats,
   getInstagramSnapshot,
   getInstagramStats,
@@ -12,7 +13,7 @@ import { groupByAccount, groupNote, hasAccounts, type Grouped } from "@/lib/comp
 import { streamAnalysis, type Dataset, type Entity } from "@/lib/analysis"
 import { getAgent, getScoring } from "@/lib/admin/config"
 import { pinnedKnowledge } from "@/lib/admin/knowledge"
-import { logEvent, saveAnalysis } from "@/lib/admin/log"
+import { logEvent, saveAnalysis, startLookupContext } from "@/lib/admin/log"
 import { activateScoring, scoreAll, serializeScoreConfig } from "@/lib/metrics"
 
 export const maxDuration = 120
@@ -23,7 +24,10 @@ type Event =
   | { type: "status" | "text" | "error"; text: string }
   | { type: "data"; data: Dataset }
   | { type: "choices"; reason: "multiple" | "confirm" | "typo"; text: string; options: Place[] }
+  // One unit of research, shown on the scan screen. `meta` is a real value found (never a guess).
+  | { type: "step"; id: string; label: string; state: "running" | "done" | "skipped"; meta?: string }
 
+const fmtCount = (n: number) => new Intl.NumberFormat("es", { notation: "compact", maximumFractionDigits: 1 }).format(n)
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : "error")
 
 function host(url: string | null | undefined): string | null {
@@ -52,15 +56,16 @@ function isSameBusiness(place: Place, extras: InstagramExtras, handle: string): 
 
 // Reads every social network linked from a website. Instagram is the anchor; the
 // other networks add to it when the business has them.
-async function socialsFromWebsiteUncached(website: string | null): Promise<Pick<Entity, "instagram" | "instagramNote" | "networks" | "networksNote">> {
-  const links = await findSocialLinks(website)
+async function socialsFromWebsiteUncached(place: Place): Promise<Pick<Entity, "instagram" | "instagramNote" | "networks" | "networksNote">> {
+  const links = await findSocialLinks(place.website)
+  if (!links.instagram) links.instagram = await searchInstagramHandle(place.name, place.address)
   const [instagram, others] = await Promise.all([
     links.instagram
       ? getInstagramStats(links.instagram).then(
           (s) => ({ instagram: s, instagramNote: "ok" }),
           (e) => ({ instagram: null, instagramNote: `Instagram @${links.instagram} no disponible: ${errMsg(e)}` })
         )
-      : Promise.resolve({ instagram: null, instagramNote: "No se encontró Instagram en su sitio web" }),
+      : Promise.resolve({ instagram: null, instagramNote: "No se encontró Instagram ni en su sitio web ni en Google" }),
     getNetworkStats(links),
   ])
   return { ...instagram, networks: others.networks, networksNote: others.note }
@@ -76,7 +81,7 @@ function makeReader(): Reader {
     const key = host(place.website) ?? `place:${place.id}`
     let socials = cache.get(key)
     if (!socials) {
-      socials = socialsFromWebsiteUncached(place.website)
+      socials = socialsFromWebsiteUncached(place)
       cache.set(key, socials)
     }
     return { name: place.name, place, ...(await socials) }
@@ -130,6 +135,11 @@ export async function POST(req: Request) {
     async start(controller) {
       const send = (e: Event) => controller.enqueue(encoder.encode(JSON.stringify(e) + "\n"))
       const t0 = Date.now()
+      const lookupCtx = startLookupContext(query)
+      const step = (id: string, label: string, state: "running" | "done" | "skipped", meta?: string) =>
+        send({ type: "step", id, label, state, meta })
+      const placeMeta = (p: Place | null) =>
+        p ? [p.rating != null ? `${p.rating.toFixed(1)}★` : null, p.reviews != null ? `${p.reviews} reseñas` : null].filter(Boolean).join(" · ") || undefined : undefined
       try {
         // Rules published in the admin panel (defaults if none or Supabase is down).
         const [scoring, agent, pinned] = await Promise.all([getScoring(), getAgent(), pinnedKnowledge()])
@@ -140,6 +150,7 @@ export async function POST(req: Request) {
         if (handle) {
           // ---- Mode A: starts from the Instagram account ----
           send({ type: "status", text: `Leyendo el perfil de @${handle} en Instagram...` })
+          step("instagram", `Leyendo el perfil de @${handle}`, "running")
           let snapshot
           try {
             snapshot = await getInstagramSnapshot(handle)
@@ -148,24 +159,33 @@ export async function POST(req: Request) {
             return
           }
           const { stats, extras } = snapshot
+          step("instagram", `Perfil de @${handle} leído`, "done", stats.followers != null ? `${fmtCount(stats.followers)} seguidores` : undefined)
           const displayName = extras.fullName ?? `@${handle}`
+          lookupCtx.business = displayName
 
           // Try to attach a Google listing, but only if it is verifiably the same business.
           let place: Place | null = null
           const location = [extras.street, extras.city].filter(Boolean).join(" ")
           if (location || extras.externalUrl) {
             send({ type: "status", text: `Buscando ${displayName} en Google Maps...` })
+            step("google", "Buscando su ficha de Google", "running")
             try {
               const candidate = await findBusiness(`${displayName} ${extras.city ?? ""}`.trim())
               if (candidate && isSameBusiness(candidate, extras, handle)) place = candidate
             } catch {
               // Google lookup is optional in this mode.
             }
+            if (place) step("google", "Ficha de Google leída", "done", placeMeta(place))
+            else step("google", "Sin ficha de Google confirmada", "skipped")
+          } else {
+            step("google", "Sin ubicación para buscar en Google", "skipped")
           }
 
           // Other networks come from the business website (Google listing, else the IG profile link).
           send({ type: "status", text: "Buscando sus otras redes sociales (Facebook, TikTok, YouTube)..." })
+          step("networks", "Buscando sus otras redes", "running")
           const others = await getNetworkStats(await findSocialLinks(place?.website ?? extras.externalUrl))
+          step("networks", others.networks.length ? "Otras redes leídas" : "Sin otras redes encontradas", others.networks.length ? "done" : "skipped", others.networks.length ? others.networks.map((n) => n.network).join(", ") : undefined)
           const business: Entity = {
             name: displayName,
             place,
@@ -180,9 +200,13 @@ export async function POST(req: Request) {
 
           if (place) {
             send({ type: "status", text: "Encontré su ficha de Google. Buscando competidores cercanos..." })
+            step("competitors", "Buscando competidores cercanos", "running")
             const near = await findCompetitors(place)
+            step("competitors", "Competidores encontrados", "done", `${near.length} en 3 km`)
             send({ type: "status", text: "Leyendo las redes sociales de la competencia..." })
+            step("rivals", "Leyendo las redes de la competencia", "running")
             const result = await analyzeCompetitors(Promise.resolve(business), near, makeReader())
+            step("rivals", "Redes de la competencia leídas", "done", `${result.competitors.filter(hasAccounts).length} con cuentas`)
             competitors = result.competitors
             groupedNote = groupNote(result.grouped)
             competitorsSource = `negocios cercanos del mismo tipo en Google Maps (radio 3 km)${groupedNote}`
@@ -235,9 +259,14 @@ export async function POST(req: Request) {
             business = decision.place
           }
           send({ type: "status", text: `Encontré: ${business.name} (${business.address}). Buscando competidores...` })
+          step("google", "Ficha de Google leída", "done", placeMeta(business))
+          lookupCtx.business = business.name
+          step("competitors", "Buscando competidores cercanos", "running")
           const competitorPlaces = await findCompetitors(business)
+          step("competitors", "Competidores encontrados", "done", `${competitorPlaces.length} en 3 km`)
 
           send({ type: "status", text: "Leyendo las redes sociales de tu negocio y de la competencia..." })
+          step("social", "Leyendo las redes de tu negocio y la competencia", "running")
           const read = makeReader()
           const businessPromise = read(business)
           const [businessEntity, result] = await Promise.all([
@@ -245,6 +274,8 @@ export async function POST(req: Request) {
             analyzeCompetitors(businessPromise, competitorPlaces, read),
           ])
           const competitorEntities = result.competitors
+          const withAccounts = [businessEntity, ...competitorEntities].filter(hasAccounts).length
+          step("social", "Redes sociales leídas", "done", `${withAccounts} negocios con cuentas`)
 
           data = {
             mode: "business_name",
@@ -262,6 +293,7 @@ export async function POST(req: Request) {
         if (scoring.custom) data.scoring = serializeScoreConfig(scoring.config)
         send({ type: "data", data })
         send({ type: "status", text: "Analizando los datos..." })
+        step("analysis", "Escribiendo el diagnóstico", "running")
         for await (const chunk of streamAnalysis(data, {
           tone: agent.config.tone,
           instructions: agent.config.analysisInstructions,
@@ -269,6 +301,7 @@ export async function POST(req: Request) {
         })) {
           send({ type: "text", text: chunk })
         }
+        step("analysis", "Diagnóstico listo", "done")
         saveAnalysis({
           query,
           data,

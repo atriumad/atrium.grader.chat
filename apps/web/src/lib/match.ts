@@ -80,7 +80,8 @@ export function decide(query: string, candidates: Place[]): Decision {
       action: "ask",
       reason: "multiple",
       message: `Encontré ${tied.length} locales de "${query}". ¿Cuál quieres analizar?`,
-      options: tied.map((s) => s.p),
+      // Busiest location first: usually the main one, and the best default to show.
+      options: tied.map((s) => s.p).sort((a, b) => (b.reviews ?? 0) - (a.reviews ?? 0)),
     }
   }
 

@@ -22,11 +22,12 @@ const TTL_MS = 30_000
 async function readRow(key: ConfigKey, fresh = false): Promise<Stored | null> {
   if (!supabaseConfigured()) return null
   const hit = cache.get(key)
-  if (!fresh && hit && Date.now() - hit.at < TTL_MS) return hit.row
+  // performance.now(), not Date.now(): Next rejects wall-clock reads while prerendering.
+  if (!fresh && hit && performance.now() - hit.at < TTL_MS) return hit.row
   try {
     const { data, error } = await db().from("app_config").select("value, updated_at, updated_by").eq("key", key).maybeSingle()
     if (error) throw error
-    cache.set(key, { at: Date.now(), row: (data as Stored | null) ?? null })
+    cache.set(key, { at: performance.now(), row: (data as Stored | null) ?? null })
     return (data as Stored | null) ?? null
   } catch {
     return hit?.row ?? null // keep serving the last known value

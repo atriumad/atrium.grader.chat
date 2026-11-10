@@ -3,7 +3,10 @@
 import * as React from "react"
 
 import type { Dataset } from "@/lib/analysis"
+import { ChannelTabs } from "@/components/results/channel-tabs"
 import { CompetitorMap, type MapPoint } from "@/components/results/competitor-map"
+import { Gaps } from "@/components/results/gaps"
+import { gapsOf } from "@/lib/gaps"
 import {
   COMPETITOR_RADIUS_M,
   CONFIDENCE_LABEL,
@@ -203,6 +206,7 @@ export function Report({
   const bench = React.useMemo(() => benchmarks(rows), [rows])
   const you = rows.find((r) => r.isYou)!
   const avg = React.useMemo(() => rivalsAverage(rows), [rows])
+  const gaps = React.useMemo(() => gapsOf(bench), [bench])
   const points = React.useMemo(() => mapPoints(rows), [rows])
   const showMap = points.length > 0
   const [active, setActive] = React.useState<string | null>(null)
@@ -217,22 +221,18 @@ export function Report({
         <ScorePanel you={you} total={rows.length} avg={avg} bench={bench} />
       </div>
 
-      {children}
+      <Gaps gaps={gaps} ahead={you.score !== null && avg !== null && you.score >= avg} />
 
-      {evidence && showMap ? (
-        <div className="reveal-clip overflow-hidden rounded-2xl border bg-card">
-          <h3 className="border-b px-4 py-3 text-sm font-medium sm:px-5">Dónde compites</h3>
-          <div className="reveal-settle">
-            <CompetitorMap points={points} radiusMeters={COMPETITOR_RADIUS_M} activeKey={active} onActive={setActive} />
-          </div>
-          <p className="border-t px-4 py-2.5 text-xs text-muted-foreground sm:px-5">
-            Halo = puntaje · tamaño = audiencia total en redes. Pulsa un pin para el detalle.
-          </p>
-        </div>
+      {children ? (
+        <section aria-label="Resumen" className="flex flex-col gap-3">
+          <h3 className="text-sm font-medium">Resumen</h3>
+          {children}
+        </section>
       ) : null}
 
       {evidence ? (
-      <div className="reveal-rise overflow-hidden rounded-2xl border bg-card" style={{ "--d": showMap ? "260ms" : "0ms" } as React.CSSProperties}>
+      <div className={`grid items-start gap-6 ${showMap ? "lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]" : ""}`}>
+      <div className="reveal-rise overflow-hidden rounded-2xl border bg-card" style={{ "--d": "0ms" } as React.CSSProperties}>
         <h3 className="border-b px-4 py-3 text-sm font-medium sm:px-5">Ranking de tu zona</h3>
         <div className="overflow-x-auto">
           <table className="w-full sm:min-w-[560px] border-collapse text-sm">
@@ -297,7 +297,21 @@ export function Report({
           Competencia: {data.competitorsSource} · Redes: últimos posts públicos.
         </p>
       </div>
+      {showMap ? (
+        <div className="reveal-clip overflow-hidden rounded-2xl border bg-card">
+          <h3 className="border-b px-4 py-3 text-sm font-medium sm:px-5">Dónde compites</h3>
+          <div className="reveal-settle">
+            <CompetitorMap points={points} radiusMeters={COMPETITOR_RADIUS_M} activeKey={active} onActive={setActive} />
+          </div>
+          <p className="border-t px-4 py-2.5 text-xs text-muted-foreground sm:px-5">
+            Halo = puntaje · tamaño = audiencia total en redes. Pulsa un pin para el detalle.
+          </p>
+        </div>
       ) : null}
+      </div>
+      ) : null}
+
+      <ChannelTabs data={data} />
     </section>
   )
 }

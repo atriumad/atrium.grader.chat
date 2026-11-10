@@ -1,5 +1,6 @@
 import { Suspense } from "react"
 import { redirect } from "next/navigation"
+import { connection } from "next/server"
 
 import { AdminNav } from "@/components/admin/nav"
 import { missingEnv, SetupGuide } from "@/components/admin/setup-guide"
@@ -17,6 +18,7 @@ export default function PanelLayout({ children }: { children: React.ReactNode })
 }
 
 async function Guard({ children }: { children: React.ReactNode }) {
+  await connection()
   if (!authConfigured() || !supabaseConfigured() || !adminEmails().length) return <SetupGuide missing={missingEnv()} />
   const admin = await getAdmin()
   if (!admin) {

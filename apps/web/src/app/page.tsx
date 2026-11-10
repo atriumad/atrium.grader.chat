@@ -13,9 +13,10 @@ import {
 } from "@/components/blocks/prompt-input/prompt-input"
 import { Prose } from "@/components/results/prose"
 import { Report } from "@/components/results/report"
-import { Steps } from "@/components/results/steps"
+import { Scan, type ScanStep } from "@/components/results/scan"
 import { Bubble, BubbleContent } from "@/components/ui/bubble"
 import { Button } from "@/components/ui/button"
+import { Sheet, SheetBody, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Message, MessageContent } from "@/components/ui/message"
 import {
   MessageScroller,
@@ -39,6 +40,7 @@ type AssistantTurn = {
   query: string
   text: string
   steps: string[]
+  scan: ScanStep[]
   data?: Dataset
   choices?: { text: string; options: Place[]; chosenId?: string }
   streaming: boolean
@@ -63,6 +65,7 @@ type Status = "ready" | "submitted" | "streaming" | "error"
 type StreamEvent =
   | { type: "status" | "text" | "error"; text: string }
   | { type: "data"; data: Dataset }
+  | ({ type: "step" } & ScanStep)
   | { type: "choices"; reason: string; text: string; options: Place[] }
 
 let counter = 0
@@ -90,6 +93,7 @@ export default function Page() {
   async function ask(text: string) {
     if (!text || !report?.data || status === "submitted" || status === "streaming") return
     setDraft("")
+    setChatOpen(true)
 
     // What the server needs: everything said after the report.
     const history: Array<{ role: "user" | "assistant"; content: string }> = []
@@ -167,7 +171,7 @@ export default function Page() {
     setTurns((prev) => [
       ...prev,
       { id: nextId(), role: "user", text: pick?.label ?? query },
-      { id: assistantId, role: "assistant", query, text: "", steps: ["Empezando…"], streaming: true },
+      { id: assistantId, role: "assistant", query, text: "", steps: ["Empezando…"], scan: [], streaming: true },
     ])
     setStatus("submitted")
 
@@ -199,7 +203,14 @@ export default function Page() {
         for (const line of lines) {
           if (!line.trim()) continue
           const evt = JSON.parse(line) as StreamEvent
-          if (evt.type === "status") {
+          if (evt.type === "step") {
+            const { id, label, state, meta } = evt
+            patch(assistantId, (t) => ({
+              scan: t.scan.some((x) => x.id === id)
+                ? t.scan.map((x) => (x.id === id ? { id, label, state, meta } : x))
+                : [...t.scan, { id, label, state, meta }],
+            }))
+          } else if (evt.type === "status") {
             patch(assistantId, (t) => ({
               steps: t.steps[t.steps.length - 1] === evt.text ? t.steps : [...t.steps.filter((s) => s !== "Empezando…"), evt.text],
             }))
@@ -252,59 +263,20 @@ export default function Page() {
     void run(turn.query, { placeId: place.id, label: `${place.name} · ${place.address}` })
   }
 
-  const composer = (
-    <PromptInput
-      onSubmit={(m) => {
-        void send(m)
-      }}
-      value={draft}
-      onValueChange={setDraft}
-      status={status}
-      onStop={() => abortRef.current?.abort()}
-    >
-      <PromptInputBody>
-        <PromptInputTextarea
-          placeholder={report ? "Pregunta sobre este análisis" : "Nombre y ciudad (Screen Door Portland) o @usuario de Instagram"}
-        />
-        <PromptInputActions>
-          <PromptInputSubmit />
-        </PromptInputActions>
-      </PromptInputBody>
-    </PromptInput>
-  )
+  // Once the report exists the page is a dashboard: only the report stays in the main scroll,
+  // and the questions asked about it live in a side sheet.
+  const reportIndex = report ? turns.findIndex((t) => t.id === report.id) : -1
+  const mainTurns = report ? [report] : turns
+  const chatTurns = report ? turns.slice(reportIndex + 1) : []
+  const [chatOpen, setChatOpen] = React.useState(false)
+  const chatEndRef = React.useRef<HTMLDivElement | null>(null)
+  const lastChat = chatTurns[chatTurns.length - 1]
+  const lastChatText = lastChat?.role === "chat" ? lastChat.text : ""
+  React.useEffect(() => {
+    if (chatOpen) chatEndRef.current?.scrollIntoView({ block: "end" })
+  }, [chatOpen, chatTurns.length, lastChatText])
 
-  return (
-    <MessageScrollerProvider autoScroll>
-      <main className="flex h-svh flex-col bg-background">
-        <header className="flex h-14 shrink-0 items-center justify-between px-4 sm:px-6">
-          <span className="font-display text-lg leading-none">Atrium</span>
-          {empty ? null : (
-            <Button variant="ghost" size="sm" disabled={busy} onClick={() => setTurns([])}>
-              Nuevo análisis
-            </Button>
-          )}
-        </header>
-
-        {empty ? (
-          <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-center justify-center gap-8 px-4 pb-20 text-center sm:px-6">
-            <div className="flex flex-col items-center gap-3">
-              <h1 className="font-display text-4xl leading-[1.08] text-balance sm:text-5xl">
-                ¿Cómo está tu negocio frente a la competencia?
-              </h1>
-              <p className="max-w-[52ch] text-base/relaxed text-muted-foreground text-pretty">
-                Escribe el nombre con la ciudad, o su @ de Instagram, que es más preciso. Comparo su Google y sus redes sociales con los negocios de su entorno.
-              </p>
-            </div>
-            <div className="w-full text-left">{composer}</div>
-          </div>
-        ) : (
-          <>
-            <MessageScroller className="min-h-0 flex-1">
-              <MessageScrollerViewport tabIndex={-1} aria-label="Conversación">
-                <MessageScrollerContent aria-busy={busy}>
-                  <div className="mx-auto flex w-full max-w-4xl min-w-0 flex-col gap-8 px-4 pt-2 pb-12 sm:px-6">
-                    {turns.map((turn) => (
-                      <MessageScrollerItem key={turn.id} messageId={turn.id} scrollAnchor={turn.role === "user"}>
+  const turnBody = (turn: Turn) => (
                         <div className="p-px">
                           {turn.role === "chat" ? (
                             <div className="flex max-w-[68ch] flex-col gap-5">
@@ -378,11 +350,70 @@ export default function Page() {
                                   {turn.text}
                                 </p>
                               ) : (
-                                <Steps steps={turn.steps} working={turn.streaming} />
+                                <Scan steps={turn.scan} name={turn.query} />
                               )}
                             </div>
                           )}
                         </div>
+  )
+
+  const composer = (
+    <PromptInput
+      onSubmit={(m) => {
+        void send(m)
+      }}
+      value={draft}
+      onValueChange={setDraft}
+      status={status}
+      onStop={() => abortRef.current?.abort()}
+    >
+      <PromptInputBody>
+        <PromptInputTextarea
+          placeholder={report ? "Pregunta sobre este análisis" : "Nombre y ciudad (Screen Door Portland) o @usuario de Instagram"}
+        />
+        <PromptInputActions>
+          <PromptInputSubmit />
+        </PromptInputActions>
+      </PromptInputBody>
+    </PromptInput>
+  )
+
+  return (
+    <MessageScrollerProvider autoScroll>
+      <main className="flex h-svh flex-col bg-background">
+        <header className="flex h-14 shrink-0 items-center justify-between px-4 sm:px-6">
+          <span className="font-display text-lg leading-none">Atrium</span>
+          {empty ? null : (
+            <Button variant="ghost" size="sm" disabled={busy} onClick={() => {
+                setTurns([])
+                setChatOpen(false)
+              }}>
+              Nuevo análisis
+            </Button>
+          )}
+        </header>
+
+        {empty ? (
+          <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-center justify-center gap-8 px-4 pb-20 text-center sm:px-6">
+            <div className="flex flex-col items-center gap-3">
+              <h1 className="font-display text-4xl leading-[1.08] text-balance sm:text-5xl">
+                ¿Cómo está tu negocio frente a la competencia?
+              </h1>
+              <p className="max-w-[52ch] text-base/relaxed text-muted-foreground text-pretty">
+                Escribe el nombre con la ciudad, o su @ de Instagram, que es más preciso. Comparo su Google y sus redes sociales con los negocios de su entorno.
+              </p>
+            </div>
+            <div className="w-full text-left">{composer}</div>
+          </div>
+        ) : (
+          <>
+            <MessageScroller className="min-h-0 flex-1">
+              <MessageScrollerViewport tabIndex={-1} aria-label="Conversación">
+                <MessageScrollerContent aria-busy={busy}>
+                  <div className="mx-auto flex w-full max-w-4xl min-w-0 flex-col gap-8 px-4 pt-2 pb-12 sm:px-6">
+                    {mainTurns.map((turn) => (
+                      <MessageScrollerItem key={turn.id} messageId={turn.id} scrollAnchor={turn.role === "user"}>
+                        {turnBody(turn)}
                       </MessageScrollerItem>
                     ))}
                   </div>
@@ -391,7 +422,16 @@ export default function Page() {
               <MessageScrollerButton />
             </MessageScroller>
             <div className="mx-auto flex w-full max-w-4xl shrink-0 flex-col gap-3 px-4 pb-5 sm:px-6">
-              {report && !busy && !turns.some((t) => t.role === "chat") ? (
+              {report && chatTurns.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => setChatOpen(true)}
+                  className="w-fit rounded-full border bg-card px-3.5 py-1.5 text-sm transition-colors hover:bg-secondary"
+                >
+                  Ver conversación ({chatTurns.filter((t) => t.role === "user").length})
+                </button>
+              ) : null}
+              {report && !busy && chatTurns.length === 0 ? (
                 <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-0.5 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 [&::-webkit-scrollbar]:hidden" role="group" aria-label="Preguntas sugeridas">
                   {SUGGESTIONS.map((q) => (
                     <button
@@ -409,6 +449,23 @@ export default function Page() {
             </div>
           </>
         )}
+
+        <Sheet open={chatOpen && !!report} onOpenChange={setChatOpen}>
+          <SheetContent side="right" className="sm:max-w-lg">
+            <SheetHeader>
+              <SheetTitle>Pregunta sobre este análisis</SheetTitle>
+            </SheetHeader>
+            <SheetBody>
+              <div className="flex flex-col gap-6 py-4" aria-live="polite">
+                {chatTurns.map((turn) => (
+                  <div key={turn.id}>{turnBody(turn)}</div>
+                ))}
+                <div ref={chatEndRef} />
+              </div>
+            </SheetBody>
+            <SheetFooter className="sm:flex-col">{composer}</SheetFooter>
+          </SheetContent>
+        </Sheet>
       </main>
     </MessageScrollerProvider>
   )
