@@ -1,0 +1,26 @@
+{
+  "name": "@atrium/sources",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./match": "./src/match.ts",
+    "./places": "./src/places.ts",
+    "./socials": "./src/socials.ts",
+    "./competitors": "./src/competitors.ts",
+    "./read-socials": "./src/read-socials.ts",
+    "./errors": "./src/errors.ts",
+    "./log": "./src/log.ts"
+  },
+  "scripts": {
+    "test": "node --test \"src/**/*.test.ts\"",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@atrium/shared": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^24",
+    "typescript": "^5"
+  }
+}

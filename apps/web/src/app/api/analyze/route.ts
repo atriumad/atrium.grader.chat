@@ -1,8 +1,8 @@
 import { findBusiness, findCandidates, findCompetitors, getPlace, type Place } from "@/lib/places"
 import { decide } from "@/lib/match"
+import { readSocials } from "@atrium/sources/read-socials"
 import {
   findSocialLinks,
-  searchInstagramHandle,
   getNetworkStats,
   getInstagramSnapshot,
   getInstagramStats,
@@ -54,21 +54,10 @@ function isSameBusiness(place: Place, extras: InstagramExtras, handle: string): 
   return names.some((n) => n.length >= 4 && (n === pn || pn.includes(n) || n.includes(pn)))
 }
 
-// Reads every social network linked from a website. Instagram is the anchor; the
-// other networks add to it when the business has them.
+// Reads the social networks of a business (website links first, then a name-validated search).
 async function socialsFromWebsiteUncached(place: Place): Promise<Pick<Entity, "instagram" | "instagramNote" | "networks" | "networksNote">> {
-  const links = await findSocialLinks(place.website)
-  if (!links.instagram) links.instagram = await searchInstagramHandle(place.name, place.address)
-  const [instagram, others] = await Promise.all([
-    links.instagram
-      ? getInstagramStats(links.instagram).then(
-          (s) => ({ instagram: s, instagramNote: "ok" }),
-          (e) => ({ instagram: null, instagramNote: `Instagram @${links.instagram} no disponible: ${errMsg(e)}` })
-        )
-      : Promise.resolve({ instagram: null, instagramNote: "No se encontró Instagram ni en su sitio web ni en Google" }),
-    getNetworkStats(links),
-  ])
-  return { ...instagram, networks: others.networks, networksNote: others.note }
+  const { instagram, instagramNote, networks, networksNote } = await readSocials(place)
+  return { instagram, instagramNote, networks, networksNote }
 }
 
 type Socials = Awaited<ReturnType<typeof socialsFromWebsiteUncached>>

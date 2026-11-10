@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /* config options here */
-  transpilePackages: ["@atrium/shared"],
+  transpilePackages: ["@atrium/shared", "@atrium/sources"],
   cacheComponents: true,
   partialPrefetching: true,
   turbopack: {

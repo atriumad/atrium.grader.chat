@@ -12,6 +12,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^1.5.0",
     "@atrium/shared": "*",
+    "@atrium/sources": "*",
     "@base-ui/react": "^1.9.0",
     "@shadcn/react": "^0.3.1",
     "@supabase/ssr": "^0.12.7",

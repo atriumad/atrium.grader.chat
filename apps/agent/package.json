@@ -11,6 +11,8 @@
     "new-key": "node scripts/new-key.ts"
   },
   "dependencies": {
+    "@atrium/shared": "*",
+    "@atrium/sources": "*",
     "yaml": "^2.6.0"
   },
   "devDependencies": {
