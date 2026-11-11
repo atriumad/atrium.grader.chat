@@ -13,6 +13,8 @@ export function allow(key: string, max: number, windowMs: number): boolean {
   return true
 }
 
+// The platform-set headers come first: x-forwarded-for can carry a value the client made up.
 export function clientKey(req: Request): string {
-  return req.headers.get("x-forwarded-for")?.split(",")[0].trim() || "local"
+  const h = req.headers
+  return (h.get("x-vercel-forwarded-for") ?? h.get("x-real-ip") ?? h.get("x-forwarded-for")?.split(",")[0] ?? "local").trim().slice(0, 64) || "local"
 }

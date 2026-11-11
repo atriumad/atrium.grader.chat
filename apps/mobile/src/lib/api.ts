@@ -13,10 +13,10 @@ export type StreamEvent =
   | { type: "data"; data: Dataset }
   | { type: "choices"; reason: "multiple" | "confirm" | "typo"; text: string; options: Place[] }
 
-// POST JSON to the web server. Throws friendly Spanish errors for network and HTTP failures.
+// POST JSON to the web server. Throws friendly errors for network and HTTP failures.
 export async function postJson(path: string, body: unknown, signal?: AbortSignal) {
   if (!API_URL) {
-    throw new Error("Falta EXPO_PUBLIC_API_URL. Copia .env.example a .env y reinicia Expo.")
+    throw new Error("EXPO_PUBLIC_API_URL is missing. Copy .env.example to .env and restart Expo.")
   }
   try {
     return await fetch(`${API_URL}${path}`, {
@@ -28,7 +28,7 @@ export async function postJson(path: string, body: unknown, signal?: AbortSignal
   } catch (e) {
     if (signal?.aborted) throw e
     throw new Error(
-      `No pude conectar con el servidor (${API_URL}). Comprueba que la web app esté corriendo y que el teléfono esté en la misma wifi.`
+      `I could not reach the server (${API_URL}). Check that the web app is running and that the phone is on the same Wi-Fi.`
     )
   }
 }

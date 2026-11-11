@@ -5,10 +5,16 @@ import { allow, clientKey } from "@/lib/rate-limit"
 // Creates the meeting. Only called when the user presses Confirm on the proposal card.
 export async function POST(req: Request) {
   if (!allow(`book:${clientKey(req)}`, 10, 10 * 60_000)) {
-    return Response.json({ error: "Demasiados intentos. Espera unos minutos." }, { status: 429 })
+    return Response.json({ error: "Too many attempts. Wait a few minutes." }, { status: 429 })
   }
   const b = (await req.json().catch(() => null)) as Record<string, unknown> | null
-  if (!b || typeof b.start !== "string") return Response.json({ error: "Solicitud no válida." }, { status: 400 })
+  if (!b || typeof b.start !== "string") return Response.json({ error: "Invalid request." }, { status: 400 })
+  // The invitation goes out from the agency's calendar to whatever address was typed, so one
+  // address (and the whole endpoint) can only be used a few times: it must not become a mail relay.
+  const email = String(b.email ?? "").trim().toLowerCase().slice(0, 120)
+  if (!allow(`book-email:${email}`, 2, 24 * 3_600_000) || !allow("book-all", 40, 3_600_000)) {
+    return Response.json({ error: "Too many attempts. Wait a few minutes." }, { status: 429 })
+  }
 
   try {
     const r = await createBooking({
@@ -27,6 +33,6 @@ export async function POST(req: Request) {
       const status = { invalid: 400, unavailable: 409, not_configured: 503, provider_error: 502 }[e.code]
       return Response.json({ error: e.message, code: e.code }, { status })
     }
-    return Response.json({ error: "No pude crear la reunión." }, { status: 500 })
+    return Response.json({ error: "I could not create the meeting." }, { status: 500 })
   }
 }

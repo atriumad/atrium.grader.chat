@@ -1,5 +1,6 @@
 import { Suspense } from "react"
 import { redirect } from "next/navigation"
+import { connection } from "next/server"
 
 import { AdminNav } from "@/components/admin/nav"
 import { missingEnv, SetupGuide } from "@/components/admin/setup-guide"
@@ -10,13 +11,14 @@ import { authConfigured, supabaseConfigured } from "@/lib/supabase/server"
 // (required by cacheComponents); the static shell is just the loading state.
 export default function PanelLayout({ children }: { children: React.ReactNode }) {
   return (
-    <Suspense fallback={<p className="p-8 text-sm text-muted-foreground">Cargando…</p>}>
+    <Suspense fallback={<p className="p-8 text-sm text-muted-foreground">Loading…</p>}>
       <Guard>{children}</Guard>
     </Suspense>
   )
 }
 
 async function Guard({ children }: { children: React.ReactNode }) {
+  await connection()
   if (!authConfigured() || !supabaseConfigured() || !adminEmails().length) return <SetupGuide missing={missingEnv()} />
   const admin = await getAdmin()
   if (!admin) {
@@ -25,8 +27,8 @@ async function Guard({ children }: { children: React.ReactNode }) {
     if (data.user) {
       return (
         <main className="mx-auto flex min-h-svh max-w-sm flex-col justify-center gap-2 px-4">
-          <h1 className="font-display text-2xl">Sin acceso</h1>
-          <p className="text-sm text-muted-foreground">Tu correo no está en la lista de administradores.</p>
+          <h1 className="font-display text-2xl">No access</h1>
+          <p className="text-sm text-muted-foreground">Your email is not on the administrators list.</p>
         </main>
       )
     }

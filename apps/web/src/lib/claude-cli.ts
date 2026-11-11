@@ -53,7 +53,7 @@ export async function* streamViaClaudeCli(opts: {
   let spawnFailure: Error | null = null
   child.on("error", (e) => {
     spawnFailure = new Error(
-      `No pude ejecutar el CLI de Claude (${e.message}). ¿Está instalado y con sesión iniciada?`
+      `I could not run the Claude CLI (${e.message}). Is it installed and signed in?`
     )
   })
 
@@ -86,7 +86,7 @@ export async function* streamViaClaudeCli(opts: {
     if (spawnFailure) throw spawnFailure
     if (!gotText) {
       throw new Error(
-        `Claude no devolvió texto. ${stderr.trim().slice(0, 300) || "Revisa que hayas iniciado sesión con `claude` (/login)."}`
+        `Claude returned no text. ${stderr.trim().slice(0, 300) || "Check that you are signed in with `claude` (/login)."}`
       )
     }
   } finally {

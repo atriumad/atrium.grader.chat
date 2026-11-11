@@ -1,6 +1,8 @@
 import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
 
+import { isAdminEmail } from "@/lib/supabase/allowlist"
+
 // Keeps the admin session cookie fresh. Only runs on admin and auth paths.
 export async function proxy(request: NextRequest) {
   // Safety net: if Supabase falls back to the Site URL (the callback is not in its Redirect
@@ -28,7 +30,16 @@ export async function proxy(request: NextRequest) {
       },
     },
   })
-  await supabase.auth.getUser()
+  const { data } = await supabase.auth.getUser()
+
+  // Everything under the admin area, except the sign-in flow, needs an allowlisted admin.
+  const path = request.nextUrl.pathname
+  const inAdmin = path.startsWith("/admin") || path.startsWith("/api/admin")
+  const open = path === "/admin/login" || path === "/api/admin/login" || path === "/api/admin/logout"
+  if (inAdmin && !open && !isAdminEmail(data.user?.email)) {
+    if (path.startsWith("/api/")) return NextResponse.json({ error: "Unauthorized." }, { status: 401 })
+    return NextResponse.redirect(new URL("/admin/login", request.url))
+  }
   return response
 }
 

@@ -35,6 +35,6 @@ export async function book(payload: {
     if (!res.ok) return { ok: false, message: json?.error ?? `Error ${res.status}`, conflict: res.status === 409 }
     return { ok: true, label: json.label, mock: !!json.mock, meetLink: json.meetLink ?? null }
   } catch (e) {
-    return { ok: false, message: e instanceof Error ? e.message : "No pude conectar con el servidor.", conflict: false }
+    return { ok: false, message: e instanceof Error ? e.message : "I could not reach the server.", conflict: false }
   }
 }

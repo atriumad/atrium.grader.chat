@@ -11,3 +11,6 @@ dist/
 .vercel
 /ios
 /android
+
+# provider test output
+apps/web/scripts/provider-test/out/

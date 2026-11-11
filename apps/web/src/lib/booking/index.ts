@@ -27,14 +27,14 @@ async function freshSlots(cfg: BookingConfig, provider: CalendarProvider): Promi
   try {
     return buildSlots(cfg, now, await provider.busy(now, to))
   } catch (e) {
-    throw new BookingError(e instanceof Error ? e.message : "No pude consultar el calendario.", "provider_error")
+    throw new BookingError(e instanceof Error ? e.message : "I could not check the calendar.", "provider_error")
   }
 }
 
 export async function availableSlots(opts: { partOfDay?: "morning" | "afternoon" | "any"; daysAhead?: number } = {}): Promise<Slot[]> {
   const cfg = bookingConfig()
   const provider = getProvider(cfg)
-  if (!provider) throw new BookingError("La agenda no está configurada.", "not_configured")
+  if (!provider) throw new BookingError("The calendar is not configured.", "not_configured")
   const all = await freshSlots(cfg, provider)
   const cutoff = opts.daysAhead ? Date.now() + opts.daysAhead * 86_400_000 : Infinity
   return pickSpread(cfg, all.filter((s) => new Date(s.start).getTime() <= cutoff), { partOfDay: opts.partOfDay })
@@ -44,7 +44,7 @@ export async function availableSlots(opts: { partOfDay?: "morning" | "afternoon"
 export async function findFreeSlot(start: string): Promise<Slot | null> {
   const cfg = bookingConfig()
   const provider = getProvider(cfg)
-  if (!provider) throw new BookingError("La agenda no está configurada.", "not_configured")
+  if (!provider) throw new BookingError("The calendar is not configured.", "not_configured")
   const iso = Number.isNaN(Date.parse(start)) ? null : new Date(start).toISOString()
   if (!iso) return null
   return (await freshSlots(cfg, provider)).find((s) => s.start === iso) ?? null
@@ -70,11 +70,11 @@ export function validateInput(input: BookingInput): { ok: true; value: Required<
   const phone = clean(input.phone, 25)
   const notes = clean(input.notes, 500)
   const businessName = clean(input.businessName, 120)
-  if (name.length < 2) return { ok: false, error: "Escribe tu nombre." }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return { ok: false, error: "El correo no parece válido." }
-  if (phone && !/^[+()\d\s.-]{6,25}$/.test(phone)) return { ok: false, error: "El teléfono no parece válido." }
-  if (!businessName) return { ok: false, error: "Falta el nombre del negocio." }
-  if (Number.isNaN(Date.parse(input.start))) return { ok: false, error: "El horario no es válido." }
+  if (name.length < 2) return { ok: false, error: "Enter your name." }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return { ok: false, error: "The email address does not look valid." }
+  if (phone && !/^[+()\d\s.-]{6,25}$/.test(phone)) return { ok: false, error: "The phone number does not look valid." }
+  if (!businessName) return { ok: false, error: "The business name is missing." }
+  if (Number.isNaN(Date.parse(input.start))) return { ok: false, error: "The time slot is not valid." }
   const score = typeof input.score === "number" && Number.isFinite(input.score) ? Math.round(input.score) : null
   return { ok: true, value: { start: new Date(input.start).toISOString(), name, email, phone, notes, businessName, score } }
 }
@@ -84,7 +84,7 @@ let lock: Promise<unknown> = Promise.resolve()
 export async function createBooking(input: BookingInput): Promise<CreatedBooking & { label: string }> {
   const cfg = bookingConfig()
   const provider = getProvider(cfg)
-  if (!provider) throw new BookingError("La agenda no está configurada.", "not_configured")
+  if (!provider) throw new BookingError("The calendar is not configured.", "not_configured")
   const v = validateInput(input)
   if (!v.ok) throw new BookingError(v.error, "invalid")
 
@@ -92,13 +92,13 @@ export async function createBooking(input: BookingInput): Promise<CreatedBooking
   const run = async () => {
     const slots = await freshSlots(cfg, provider)
     const slot = slots.find((s) => s.start === v.value.start)
-    if (!slot) throw new BookingError("Ese horario ya no está disponible.", "unavailable")
+    if (!slot) throw new BookingError("That time slot is no longer available.", "unavailable")
     const req: BookingRequest = { ...v.value, end: slot.end }
     try {
       const created = await provider.create(req, cfg)
       return { ...created, label: formatSlot(new Date(slot.start), cfg.timezone) }
     } catch (e) {
-      throw new BookingError(e instanceof Error ? e.message : "No pude crear la reunión.", "provider_error")
+      throw new BookingError(e instanceof Error ? e.message : "I could not create the meeting.", "provider_error")
     }
   }
   const result = lock.then(run, run)

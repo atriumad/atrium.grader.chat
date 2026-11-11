@@ -59,7 +59,7 @@ function parse(src: string): Block[] {
 export function Prose({ text, streaming = false }: { text: string; streaming?: boolean }) {
   const blocks = parse(text)
   return (
-    <div className="flex max-w-[68ch] flex-col gap-3 text-base/relaxed" aria-live="polite" aria-busy={streaming}>
+    <div className="flex max-w-none flex-col gap-2.5 text-sm/relaxed" aria-live="polite" aria-busy={streaming}>
       {blocks.map((b, i) => {
         const isLast = i === blocks.length - 1
         const caret =
@@ -68,7 +68,7 @@ export function Prose({ text, streaming = false }: { text: string; streaming?: b
           ) : null
         if (b.t === "h")
           return (
-            <h3 key={i} className="mt-4 font-display text-xl leading-snug text-balance first:mt-0">
+            <h3 key={i} className="mt-3 font-display text-lg leading-snug text-balance first:mt-0">
               {inline(b.text)}
               {caret}
             </h3>
@@ -86,9 +86,9 @@ export function Prose({ text, streaming = false }: { text: string; streaming?: b
           )
         if (b.t === "ol")
           return (
-            <ol key={i} className="flex flex-col gap-3">
+            <ol key={i} className="flex flex-col gap-2">
               {b.items.map((it, j) => (
-                <li key={j} className="grid grid-cols-[1.75rem_1fr] items-baseline gap-2 rounded-xl border bg-card px-4 py-3">
+                <li key={j} className="grid grid-cols-[1.75rem_1fr] items-baseline gap-2 rounded-xl border bg-card px-3.5 py-2.5">
                   <span className="font-display text-xl leading-none text-brand tnum">{j + 1}</span>
                   <span>
                     {inline(it)}

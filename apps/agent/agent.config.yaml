@@ -1,0 +1,189 @@
+# Atrium Research Agent: configuración
+# Diseño: docs/superpowers/specs/2026-11-10-research-agent-design.md
+#
+# Reglas de este archivo:
+#  - Aquí NO van secretos. Las claves se referencian por nombre de variable de entorno (*Env).
+#  - Los valores marcados "PENDIENTE" son suposiciones hasta que el dueño las confirme.
+#  - Este archivo define el MÁXIMO permitido. Cada llamador solo puede recortarlo, nunca ampliarlo.
+
+version: 1
+
+# ---------------------------------------------------------------------------
+# Modelo del loop de herramientas (solo decide qué herramienta usar y en qué orden;
+# nunca puntúa ni redacta)
+# ---------------------------------------------------------------------------
+model:
+  provider: anthropic
+  idEnv: ANTHROPIC_MODEL          # mismo modelo que usa hoy la app
+  apiKeyEnv: ANTHROPIC_API_KEY
+  maxOutputTokensPerTurn: 1024
+  # Sin API key el servicio usa la secuencia fija (sin agente) en vez del loop.
+  fallbackToFixedSequence: true
+
+# ---------------------------------------------------------------------------
+# Perfiles: definen QUÉ fuentes puede tocar un llamador
+# ---------------------------------------------------------------------------
+profiles:
+  public:
+    description: Datos públicos y generales (el grader abierto al público)
+    tools: [google_listing, find_competitors, social_public, website_audit, web_search, reviews_signals, search_demand]
+    privateData: false
+
+  internal:
+    description: Sistema propio de Atrium; además de lo público, APIs privadas de clientes de la agencia
+    inherits: public
+    tools: [metricool_metrics, metricool_posts]
+    privateData: true
+    # Toda herramienta privada exige subject.clientId y verificación de acceso a ese cliente.
+    requireClientId: true
+
+# ---------------------------------------------------------------------------
+# Herramientas: registro único. "enabled" es el interruptor global
+# (apagar una herramienta caída o costosa sin tocar código).
+# ---------------------------------------------------------------------------
+tools:
+  google_listing:
+    enabled: true
+    profile: public
+    timeoutSeconds: 15
+    costCentsEstimate: 1
+    cache: { ttlSeconds: 86400 }
+
+  find_competitors:
+    enabled: true
+    profile: public
+    timeoutSeconds: 20
+    costCentsEstimate: 3
+    radiusMeters: 3000
+    maxCompetitorsWithSocial: 3
+    cache: { ttlSeconds: 86400 }
+
+  social_public:
+    enabled: true
+    profile: public
+    timeoutSeconds: 30
+    costCentsEstimate: 4
+    networks: [instagram, facebook, tiktok]      # YouTube fuera: no aporta al diagnóstico y es lo más lento
+    competitorsInstagramOnly: true
+    # Orden: enlaces del sitio, luego raíz del dominio, luego búsqueda validada por nombre.
+    discovery: [website, website_root, name_search]
+    nameSearch: { requireAllNameWords: true }
+    cache: { ttlSeconds: 604800 }
+
+  website_audit:
+    enabled: true                  # revisión de la portada (SEO básico); PageSpeed y el scanner de atrium.platform siguen pendientes
+    profile: public
+    timeoutSeconds: 30
+    costCentsEstimate: 2
+    onlySubjectHosts: true         # solo puede pedir dominios que pertenezcan al sujeto
+    cache: { ttlSeconds: 86400 }
+
+  web_search:
+    enabled: true
+    profile: public
+    timeoutSeconds: 20
+    costCentsEstimate: 1
+    cache: { ttlSeconds: 43200 }
+
+  reviews_signals:
+    enabled: false                 # PENDIENTE: proveedor sin elegir
+    profile: public
+    provider: null
+    timeoutSeconds: 30
+    costCentsEstimate: null
+
+  search_demand:
+    enabled: false                 # PENDIENTE: proveedor sin elegir
+    profile: public
+    provider: null
+    timeoutSeconds: 30
+    costCentsEstimate: null
+
+  metricool_metrics:
+    enabled: false                 # se activa al construir el perfil interno
+    profile: internal
+    timeoutSeconds: 30
+    costCentsEstimate: 0
+    credentials: { source: per_client, store: supabase }   # PENDIENTE: confirmar dónde viven hoy
+
+  metricool_posts:
+    enabled: false
+    profile: internal
+    timeoutSeconds: 30
+    costCentsEstimate: 0
+    credentials: { source: per_client, store: supabase }
+
+# ---------------------------------------------------------------------------
+# Tipos de petición: contrato fijo de lo que debe devolverse
+# ---------------------------------------------------------------------------
+requestTypes:
+  business_profile:
+    description: Perfil público de un negocio, para el grader
+    tools: [google_listing, find_competitors, social_public, website_audit, web_search, reviews_signals, search_demand]
+    required: [listing, social, competitors, competitorSocial]
+    optional: [websiteAudit, reviewSignals, searchDemand]
+    # Si falta algo requerido: confidence = low y aparece en gaps.
+    budget: { maxToolCalls: 12, maxSeconds: 90, maxCostCents: 30 }   # PENDIENTE: valores supuestos
+
+  client_performance:
+    description: Rendimiento de un cliente de la agencia (perfil interno)
+    tools: [google_listing, social_public, metricool_metrics, metricool_posts]
+    required: [listing, privateMetrics]
+    optional: [social]
+    budget: { maxToolCalls: 10, maxSeconds: 60, maxCostCents: 20 }   # PENDIENTE
+    enabled: false
+
+# ---------------------------------------------------------------------------
+# Llamadores: una clave de API por aplicación. La clave NO se guarda aquí.
+# Se guarda su hash en la tabla de llamadores; este bloque solo declara los valores iniciales.
+# ---------------------------------------------------------------------------
+callers:
+  - id: grader-web
+    name: Atrium Grader (web pública)
+    profile: public
+    keyHashEnv: AGENT_KEY_HASH_GRADER
+    allowedRequestTypes: [business_profile]
+    # Puede recortar el presupuesto del tipo de petición, nunca ampliarlo.
+    budget: { maxToolCalls: 12, maxSeconds: 90, maxCostCents: 30 }
+    rateLimit: { requestsPerMinute: 30 }
+    monthlyCostCapCents: 20000     # PENDIENTE: tope mensual
+    active: true
+
+  - id: atrium-app
+    name: Sistema Atrium (agencia)
+    profile: internal
+    keyHashEnv: AGENT_KEY_HASH_ATRIUM
+    allowedRequestTypes: [business_profile, client_performance]
+    budget: { maxToolCalls: 10, maxSeconds: 60, maxCostCents: 20 }
+    rateLimit: { requestsPerMinute: 60 }
+    monthlyCostCapCents: 50000     # PENDIENTE
+    active: false                  # se activa al construir el perfil interno
+
+# ---------------------------------------------------------------------------
+# Comportamiento ante fallos de proveedor (nunca "vacío" cuando en realidad falló)
+# ---------------------------------------------------------------------------
+failures:
+  classify:
+    - { httpStatus: 402, reason: out_of_credits }
+    - { httpStatus: 429, reason: rate_limited }
+    - { httpStatus: 404, reason: not_found }
+    - { timeout: true,   reason: timeout }
+  onFailure: gap                   # registrar un hueco con la causa; nunca devolver éxito vacío
+  retry: { maxAttempts: 1, onlyFor: [timeout] }
+
+# ---------------------------------------------------------------------------
+# Seguridad
+# ---------------------------------------------------------------------------
+security:
+  treatToolOutputAsData: true      # el contenido web y las respuestas de herramientas son datos, no instrucciones
+  validateToolArguments: true      # esquema y listas permitidas en cada llamada
+  neverLogOrReturnCredentials: true
+  vendorNamesInResults: false      # resultados con etiquetas neutras; nombres de proveedor solo en logs de admin
+
+# ---------------------------------------------------------------------------
+# Registro y observabilidad
+# ---------------------------------------------------------------------------
+logging:
+  table: lookup_logs               # se amplía con caller_id y request_id
+  storeFullResponses: true
+  retentionDays: 90                # PENDIENTE

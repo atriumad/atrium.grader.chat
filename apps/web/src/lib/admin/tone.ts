@@ -1,9 +1,9 @@
 export type Tone = "cercano" | "formal" | "directo"
 
-export const TONE_LABEL: Record<Tone, string> = { cercano: "Cercano", formal: "Formal", directo: "Directo y breve" }
+export const TONE_LABEL: Record<Tone, string> = { cercano: "Friendly", formal: "Formal", directo: "Direct and brief" }
 
 export function toneLine(t: Tone): string {
-  if (t === "formal") return "profesional y formal; trata de usted al usuario, sin coloquialismos."
-  if (t === "directo") return "directo y muy conciso; ve al grano, sin introducciones ni frases de cortesía largas."
-  return "cercano y profesional, claro y sin jerga."
+  if (t === "formal") return "professional and formal; no colloquialisms."
+  if (t === "directo") return "direct and very concise; get to the point, no introductions or long courtesy phrases."
+  return "friendly and professional, clear and jargon-free."
 }

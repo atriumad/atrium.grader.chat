@@ -118,19 +118,19 @@ export function ScoringEditor({
     const json = res ? await res.json().catch(() => ({})) : {}
     setBusy(false)
     if (res?.ok) {
-      setMsg({ ok: true, text: method === "PUT" ? "Publicado. Los análisis nuevos usan estas reglas." : "Restablecido a los valores por defecto." })
+      setMsg({ ok: true, text: method === "PUT" ? "Published. New analyses use these rules." : "Reset to the default values." })
       setNote("")
       router.refresh()
       return true
     }
-    setMsg({ ok: false, text: json.error ?? "No se pudo guardar." })
+    setMsg({ ok: false, text: json.error ?? "Could not save." })
     return false
   }
 
   return (
     <div className="grid gap-6 xl:grid-cols-[1fr_22rem]">
       <div className="flex min-w-0 flex-col gap-6">
-        <Card title="Peso de cada señal" hint="Se normaliza solo: lo que importa es la proporción. Si falta una señal en un negocio, se calcula con las demás.">
+        <Card title="Weight of each signal" hint="It normalizes itself: only the proportion matters. If a signal is missing for a business, the score is calculated from the others.">
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
             {PARTS.map((k) => (
               <div key={k} className="flex flex-col gap-1.5">
@@ -141,54 +141,54 @@ export function ScoringEditor({
           </div>
         </Card>
 
-        <Card title="Niveles" hint="Desde qué puntaje un negocio es verde (bueno) o naranja (medio). Por debajo es rojo.">
+        <Card title="Levels" hint="From what score a business is green (good) or orange (fair). Below that it is red.">
           <div className="grid max-w-md grid-cols-2 gap-4">
-            <Num label="Verde desde" value={draft.tiers.good} min={1} max={100} onChange={(n) => edit((d) => void (d.tiers.good = n))} />
-            <Num label="Naranja desde" value={draft.tiers.medium} min={0} max={100} onChange={(n) => edit((d) => void (d.tiers.medium = n))} />
+            <Num label="Green from" value={draft.tiers.good} min={1} max={100} onChange={(n) => edit((d) => void (d.tiers.good = n))} />
+            <Num label="Orange from" value={draft.tiers.medium} min={0} max={100} onChange={(n) => edit((d) => void (d.tiers.medium = n))} />
           </div>
         </Card>
 
-        <Card title="Reputación (Google)" hint="Promedio bayesiano: un 5.0 con pocas reseñas no vale como un 4.8 con miles.">
+        <Card title="Reputation (Google)" hint="Bayesian average: a 5.0 with few reviews is not worth the same as a 4.8 with thousands.">
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-            <Num label="Rating supuesto sin reseñas" value={draft.reputation.priorMean} step={0.1} onChange={(n) => edit((d) => void (d.reputation.priorMean = n))} />
-            <Num label="Reseñas que vale ese supuesto" value={draft.reputation.priorWeight} onChange={(n) => edit((d) => void (d.reputation.priorWeight = n))} hint="Más alto = cuesta más salir del supuesto." />
-            <Num label="Rating que da 0 puntos" value={draft.reputation.ratingFloor} step={0.1} onChange={(n) => edit((d) => void (d.reputation.ratingFloor = n))} hint="5.0 siempre da 100." />
-            <Num label="Peso del rating (0–1)" value={draft.reputation.ratingShare} step={0.05} onChange={(n) => edit((d) => void (d.reputation.ratingShare = n))} hint="El resto es volumen de reseñas." />
-            <Num label="Reseñas para volumen completo" value={draft.reputation.volumeFull} onChange={(n) => edit((d) => void (d.reputation.volumeFull = n))} hint="Escala logarítmica." />
+            <Num label="Assumed rating with no reviews" value={draft.reputation.priorMean} step={0.1} onChange={(n) => edit((d) => void (d.reputation.priorMean = n))} />
+            <Num label="Reviews that assumption is worth" value={draft.reputation.priorWeight} onChange={(n) => edit((d) => void (d.reputation.priorWeight = n))} hint="Higher = harder to move away from the assumption." />
+            <Num label="Rating that gives 0 points" value={draft.reputation.ratingFloor} step={0.1} onChange={(n) => edit((d) => void (d.reputation.ratingFloor = n))} hint="5.0 always gives 100." />
+            <Num label="Rating weight (0–1)" value={draft.reputation.ratingShare} step={0.05} onChange={(n) => edit((d) => void (d.reputation.ratingShare = n))} hint="The rest is review volume." />
+            <Num label="Reviews for full volume" value={draft.reputation.volumeFull} onChange={(n) => edit((d) => void (d.reputation.volumeFull = n))} hint="Logarithmic scale." />
           </div>
         </Card>
 
-        <Card title="Engagement" hint="Se compara con lo esperable para el tamaño de la cuenta: las cuentas grandes siempre tienen menos.">
+        <Card title="Engagement" hint="Compared with what is expected for the account size: large accounts always get less.">
           <div className="flex flex-col gap-5">
             <div className="flex flex-col gap-2">
-              <span className="text-sm font-medium">Engagement esperado por tamaño de cuenta</span>
+              <span className="text-sm font-medium">Expected engagement by account size</span>
               {draft.engagement.expectedByFollowers.map((row, i, arr) => {
                 const last = i === arr.length - 1
                 return (
                   <div key={i} className="grid grid-cols-[1fr_1fr_2rem] items-end gap-3">
                     {last ? (
                       <div className="flex flex-col gap-1 text-sm">
-                        <span className="text-xs text-muted-foreground">Seguidores hasta</span>
-                        <span className="flex h-9 items-center text-muted-foreground">sin tope</span>
+                        <span className="text-xs text-muted-foreground">Followers up to</span>
+                        <span className="flex h-9 items-center text-muted-foreground">no cap</span>
                       </div>
                     ) : (
                       <label className="flex flex-col gap-1 text-sm">
-                        <span className="text-xs text-muted-foreground">Seguidores hasta</span>
+                        <span className="text-xs text-muted-foreground">Followers up to</span>
                         <input className={inputCls} type="number" value={row.upTo} onChange={(e) => edit((d) => void (d.engagement.expectedByFollowers[i].upTo = Number(e.target.value) || 1))} />
                       </label>
                     )}
                     <label className="flex flex-col gap-1 text-sm">
-                      <span className="text-xs text-muted-foreground">Engagement esperado (%)</span>
+                      <span className="text-xs text-muted-foreground">Expected engagement (%)</span>
                       <input className={inputCls} type="number" step={0.1} value={row.expected} onChange={(e) => edit((d) => void (d.engagement.expectedByFollowers[i].expected = Number(e.target.value) || 0.1))} />
                     </label>
-                    <Button variant="ghost" size="icon-sm" aria-label="Quitar fila" disabled={arr.length <= 2 || last} onClick={() => edit((d) => void d.engagement.expectedByFollowers.splice(i, 1))}>
+                    <Button variant="ghost" size="icon-sm" aria-label="Remove row" disabled={arr.length <= 2 || last} onClick={() => edit((d) => void d.engagement.expectedByFollowers.splice(i, 1))}>
                       ×
                     </Button>
                   </div>
                 )
               })}
               <Button variant="outline" size="sm" className="w-fit" onClick={() => edit((d) => void d.engagement.expectedByFollowers.splice(d.engagement.expectedByFollowers.length - 1, 0, { upTo: 50_000, expected: 2.5 }))}>
-                Añadir tramo
+                Add tier
               </Button>
             </div>
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -197,89 +197,89 @@ export function ScoringEditor({
               ))}
             </div>
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-              <Num label="Múltiplo que da 100" value={draft.engagement.fullRatio} step={0.1} onChange={(n) => edit((d) => void (d.engagement.fullRatio = n))} hint="1.0× lo esperable da ~67." />
-              <Num label="Peso de las vistas (0–1)" value={draft.engagement.viewsShare} step={0.05} onChange={(n) => edit((d) => void (d.engagement.viewsShare = n))} />
-              <Num label="Vistas/seguidores que da 100" value={draft.engagement.viewsFull} step={0.05} onChange={(n) => edit((d) => void (d.engagement.viewsFull = n))} />
+              <Num label="Multiple that gives 100" value={draft.engagement.fullRatio} step={0.1} onChange={(n) => edit((d) => void (d.engagement.fullRatio = n))} hint="1.0× the expected gives ~67." />
+              <Num label="Views weight (0–1)" value={draft.engagement.viewsShare} step={0.05} onChange={(n) => edit((d) => void (d.engagement.viewsShare = n))} />
+              <Num label="Views/followers that gives 100" value={draft.engagement.viewsFull} step={0.05} onChange={(n) => edit((d) => void (d.engagement.viewsFull = n))} />
             </div>
           </div>
         </Card>
 
-        <Card title="Actividad" hint="Mezcla la frecuencia de publicación con lo reciente que es el último post.">
+        <Card title="Activity" hint="Blends posting frequency with how recent the last post is.">
           <div className="flex flex-col gap-5">
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-              <Num label="Posts por semana que da 100" value={draft.activity.postsPerWeekFull} step={0.5} onChange={(n) => edit((d) => void (d.activity.postsPerWeekFull = n))} />
-              <Num label="Peso de la frecuencia (0–1)" value={draft.activity.frequencyShare} step={0.05} onChange={(n) => edit((d) => void (d.activity.frequencyShare = n))} hint="El resto es recencia." />
+              <Num label="Posts per week that gives 100" value={draft.activity.postsPerWeekFull} step={0.5} onChange={(n) => edit((d) => void (d.activity.postsPerWeekFull = n))} />
+              <Num label="Frequency weight (0–1)" value={draft.activity.frequencyShare} step={0.05} onChange={(n) => edit((d) => void (d.activity.frequencyShare = n))} hint="The rest is recency." />
             </div>
             <div className="flex flex-col gap-2">
-              <span className="text-sm font-medium">Días desde el último post → puntos</span>
+              <span className="text-sm font-medium">Days since the last post → points</span>
               {draft.activity.recency.map((row, i, arr) => (
                 <div key={i} className="grid grid-cols-[1fr_1fr_2rem] items-end gap-3">
                   <label className="flex flex-col gap-1 text-sm">
-                    <span className="text-xs text-muted-foreground">Hasta (días)</span>
+                    <span className="text-xs text-muted-foreground">Up to (days)</span>
                     <input className={inputCls} type="number" value={row.days} onChange={(e) => edit((d) => void (d.activity.recency[i].days = Number(e.target.value) || 0))} />
                   </label>
                   <label className="flex flex-col gap-1 text-sm">
-                    <span className="text-xs text-muted-foreground">Puntos (0–100)</span>
+                    <span className="text-xs text-muted-foreground">Points (0–100)</span>
                     <input className={inputCls} type="number" value={row.score} onChange={(e) => edit((d) => void (d.activity.recency[i].score = Number(e.target.value) || 0))} />
                   </label>
-                  <Button variant="ghost" size="icon-sm" aria-label="Quitar fila" disabled={arr.length <= 1} onClick={() => edit((d) => void d.activity.recency.splice(i, 1))}>
+                  <Button variant="ghost" size="icon-sm" aria-label="Remove row" disabled={arr.length <= 1} onClick={() => edit((d) => void d.activity.recency.splice(i, 1))}>
                     ×
                   </Button>
                 </div>
               ))}
-              <p className="text-xs text-muted-foreground">Más viejo que el último tramo da 0.</p>
+              <p className="text-xs text-muted-foreground">Older than the last tier gives 0.</p>
               <Button variant="outline" size="sm" className="w-fit" onClick={() => edit((d) => void d.activity.recency.push({ days: 60, score: 5 }))}>
-                Añadir tramo
+                Add tier
               </Button>
             </div>
           </div>
         </Card>
 
         <div className="grid gap-6 md:grid-cols-2">
-          <Card title="Audiencia" hint="Seguidores totales en todas las redes, en escala logarítmica.">
+          <Card title="Audience" hint="Total followers across all networks, on a logarithmic scale.">
             <div className="grid grid-cols-2 gap-4">
-              <Num label="Seguidores = 0 puntos" value={draft.audience.followersFloor} onChange={(n) => edit((d) => void (d.audience.followersFloor = n))} />
-              <Num label="Seguidores = 100 puntos" value={draft.audience.followersFull} onChange={(n) => edit((d) => void (d.audience.followersFull = n))} />
+              <Num label="Followers = 0 points" value={draft.audience.followersFloor} onChange={(n) => edit((d) => void (d.audience.followersFloor = n))} />
+              <Num label="Followers = 100 points" value={draft.audience.followersFull} onChange={(n) => edit((d) => void (d.audience.followersFull = n))} />
             </div>
           </Card>
-          <Card title="Presencia" hint="Cuántas redes tienen un post reciente.">
+          <Card title="Presence" hint="How many networks have a recent post.">
             <div className="grid grid-cols-2 gap-4">
-              <Num label="Activa si posteó en (días)" value={draft.presence.activeDays} onChange={(n) => edit((d) => void (d.presence.activeDays = n))} />
-              <Num label="Redes activas = 100" value={draft.presence.networksFull} min={1} max={4} onChange={(n) => edit((d) => void (d.presence.networksFull = n))} />
+              <Num label="Active if posted within (days)" value={draft.presence.activeDays} onChange={(n) => edit((d) => void (d.presence.activeDays = n))} />
+              <Num label="Active networks = 100" value={draft.presence.networksFull} min={1} max={4} onChange={(n) => edit((d) => void (d.presence.networksFull = n))} />
             </div>
           </Card>
         </div>
 
-        <Card title="Confianza" hint="Cuándo el puntaje se marca como provisional.">
+        <Card title="Confidence" hint="When the score is marked as provisional.">
           <div className="grid grid-cols-3 gap-4">
-            <Num label="Mín. posts de muestra" value={draft.confidence.minPostsSample} onChange={(n) => edit((d) => void (d.confidence.minPostsSample = n))} />
-            <Num label="Alta desde (0–1)" value={draft.confidence.high} step={0.05} onChange={(n) => edit((d) => void (d.confidence.high = n))} />
-            <Num label="Media desde (0–1)" value={draft.confidence.medium} step={0.05} onChange={(n) => edit((d) => void (d.confidence.medium = n))} />
+            <Num label="Min. sample posts" value={draft.confidence.minPostsSample} onChange={(n) => edit((d) => void (d.confidence.minPostsSample = n))} />
+            <Num label="High from (0–1)" value={draft.confidence.high} step={0.05} onChange={(n) => edit((d) => void (d.confidence.high = n))} />
+            <Num label="Medium from (0–1)" value={draft.confidence.medium} step={0.05} onChange={(n) => edit((d) => void (d.confidence.medium = n))} />
           </div>
         </Card>
       </div>
 
       <aside className="flex flex-col gap-6 xl:sticky xl:top-6 xl:self-start">
-        <Card title="Publicar" hint={custom ? `Reglas personalizadas${updatedAt ? ` · ${new Date(updatedAt).toLocaleString("es")}` : ""}${updatedBy ? ` · ${updatedBy}` : ""}` : "Hoy se usan los valores por defecto."}>
+        <Card title="Publish" hint={custom ? `Custom rules${updatedAt ? ` · ${new Date(updatedAt).toLocaleString("en-US")}` : ""}${updatedBy ? ` · ${updatedBy}` : ""}` : "The default values are in use today."}>
           <div className="flex flex-col gap-3">
-            <input className={inputCls} placeholder="Nota del cambio (opcional)" value={note} maxLength={200} onChange={(e) => setNote(e.target.value)} />
+            <input className={inputCls} placeholder="Change note (optional)" value={note} maxLength={200} onChange={(e) => setNote(e.target.value)} />
             <Button disabled={!dirty || busy} onClick={() => void call("PUT", { value: serializeScoreConfig(clean), note })}>
-              {busy ? "Guardando…" : dirty ? "Publicar reglas" : "Sin cambios"}
+              {busy ? "Saving…" : dirty ? "Publish rules" : "No changes"}
             </Button>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" disabled={!dirty || busy} onClick={() => setDraft(clone(pub))}>
-                Descartar
+                Discard
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
                 disabled={busy || (!custom && same(clean, def))}
                 onClick={async () => {
-                  if (!window.confirm("¿Restablecer todas las reglas a los valores por defecto?")) return
+                  if (!window.confirm("Reset all rules to the default values?")) return
                   if (await call("DELETE")) setDraft(clone(def))
                 }}
               >
-                Valores por defecto
+                Defaults
               </Button>
             </div>
             {msg ? (
@@ -290,7 +290,7 @@ export function ScoringEditor({
           </div>
         </Card>
 
-        <Card title="Vista previa" hint={samples.length ? "Los últimos análisis, con las reglas publicadas y con tus cambios." : undefined}>
+        <Card title="Preview" hint={samples.length ? "The latest analyses, with the published rules and with your changes." : undefined}>
           {samples.length ? (
             <ul className="flex flex-col divide-y">
               {samples.map((s, i) => {
@@ -302,7 +302,7 @@ export function ScoringEditor({
                     <span className="min-w-0">
                       <span className="block truncate font-medium">{s.name}</span>
                       <span className="text-xs text-muted-foreground tnum">
-                        puesto {b?.rank ?? "—"}
+                        rank {b?.rank ?? "—"}
                         {a && b && a.rank !== b.rank ? ` → ${a.rank}` : ""}
                       </span>
                     </span>
@@ -320,24 +320,24 @@ export function ScoringEditor({
               })}
             </ul>
           ) : (
-            <p className="text-sm text-muted-foreground text-pretty">Aún no hay análisis guardados. Haz uno en la app para ver aquí cómo cambiarían los puntajes.</p>
+            <p className="text-sm text-muted-foreground text-pretty">No analyses saved yet. Run one in the app to see here how the scores would change.</p>
           )}
         </Card>
 
         {history.length ? (
-          <Card title="Historial">
+          <Card title="History">
             <ul className="flex flex-col divide-y">
               {history.map((h) => (
                 <li key={h.id} className="flex items-center justify-between gap-2 py-2 text-xs first:pt-0 last:pb-0">
                   <span className="min-w-0">
                     <span className="block truncate">{h.note || "Cambio de reglas"}</span>
                     <span className="text-muted-foreground">
-                      {new Date(h.at).toLocaleString("es", { dateStyle: "medium", timeStyle: "short" })}
+                      {new Date(h.at).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}
                       {h.by ? ` · ${h.by}` : ""}
                     </span>
                   </span>
                   <Button variant="ghost" size="xs" onClick={() => setDraft(clone(norm(h.value)))}>
-                    Cargar
+                    Load
                   </Button>
                 </li>
               ))}

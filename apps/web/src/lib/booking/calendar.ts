@@ -63,7 +63,7 @@ let cachedToken: { value: string; expires: number } | null = null
 
 async function googleToken(): Promise<string> {
   const { GOOGLE_CLIENT_ID: id, GOOGLE_CLIENT_SECRET: secret, GOOGLE_REFRESH_TOKEN: refresh } = process.env
-  if (!id || !secret || !refresh) throw new Error("Google Calendar no está configurado en el servidor.")
+  if (!id || !secret || !refresh) throw new Error("Google Calendar is not configured on the server.")
   if (cachedToken && cachedToken.expires > Date.now() + 60_000) return cachedToken.value
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
@@ -71,7 +71,7 @@ async function googleToken(): Promise<string> {
     body: new URLSearchParams({ client_id: id, client_secret: secret, refresh_token: refresh, grant_type: "refresh_token" }),
     signal: AbortSignal.timeout(15_000),
   })
-  if (!res.ok) throw new Error(`Google OAuth ${res.status}: no se pudo renovar el permiso del calendario.`)
+  if (!res.ok) throw new Error(`Google OAuth ${res.status}: could not renew the calendar permission.`)
   const json = (await res.json()) as { access_token: string; expires_in: number }
   cachedToken = { value: json.access_token, expires: Date.now() + json.expires_in * 1000 }
   return cachedToken.value
@@ -89,7 +89,7 @@ export const googleProvider: CalendarProvider = {
       body: JSON.stringify({ timeMin: from.toISOString(), timeMax: to.toISOString(), items: [{ id: calendarId() }] }),
       signal: AbortSignal.timeout(15_000),
     })
-    if (!res.ok) throw new Error(`Google Calendar ${res.status} al consultar disponibilidad.`)
+    if (!res.ok) throw new Error(`Google Calendar ${res.status} while checking availability.`)
     const json = (await res.json()) as { calendars?: Record<string, { busy?: Array<{ start: string; end: string }> }> }
     const list = json.calendars?.[calendarId()]?.busy ?? Object.values(json.calendars ?? {})[0]?.busy ?? []
     return list.map((b) => ({ start: new Date(b.start), end: new Date(b.end) }))
@@ -97,11 +97,11 @@ export const googleProvider: CalendarProvider = {
   async create(req, cfg) {
     const token = await googleToken()
     const description = [
-      `Reservado desde Atrium Grader.`,
-      `Negocio: ${req.businessName}`,
-      req.score != null ? `Puntaje Atrium: ${req.score}/100` : null,
-      `Contacto: ${req.name} · ${req.email}${req.phone ? ` · ${req.phone}` : ""}`,
-      req.notes ? `Notas: ${req.notes}` : null,
+      `Booked from Atrium Grader.`,
+      `Business: ${req.businessName}`,
+      req.score != null ? `Atrium Score: ${req.score}/100` : null,
+      `Contact: ${req.name} · ${req.email}${req.phone ? ` · ${req.phone}` : ""}`,
+      req.notes ? `Notes: ${req.notes}` : null,
     ]
       .filter(Boolean)
       .join("\n")
@@ -122,7 +122,7 @@ export const googleProvider: CalendarProvider = {
         signal: AbortSignal.timeout(20_000),
       }
     )
-    if (!res.ok) throw new Error(`Google Calendar ${res.status} al crear el evento.`)
+    if (!res.ok) throw new Error(`Google Calendar ${res.status} while creating the event.`)
     const json = (await res.json()) as { id: string; hangoutLink?: string }
     return { id: json.id, meetLink: json.hangoutLink, mock: false }
   },

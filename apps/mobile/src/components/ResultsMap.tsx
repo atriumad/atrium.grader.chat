@@ -45,7 +45,7 @@ function Pin({ p, active }: { p: MapPoint; active: boolean }) {
             active && { borderColor: colors.foreground },
           ]}
         >
-          <Text style={styles.pinText}>{p.isYou ? "Tú" : p.rank}</Text>
+          <Text style={styles.pinText}>{p.isYou ? "You" : p.rank}</Text>
         </View>
       </View>
     </View>
@@ -110,18 +110,18 @@ export function ResultsMap({
               <View style={styles.callout}>
                 <Text style={styles.calloutName}>
                   {p.name}
-                  {p.isYou ? " (tú)" : ""}
+                  {p.isYou ? " (you)" : ""}
                 </Text>
                 <View style={styles.calloutRow}>
                   <View style={[styles.dot, { backgroundColor: colors.tier[p.tier] }]} />
                   <Text style={styles.calloutScore}>
-                    {p.score === null ? "Sin puntaje" : `Puntaje ${p.score}`} · {TIER_LABEL[p.tier]}
+                    {p.score === null ? "No score" : `Score ${p.score}`} · {TIER_LABEL[p.tier]}
                   </Text>
                 </View>
                 {p.rating ? (
                   <Text style={styles.calloutLine}>
                     ★ {fmt.rating(p.rating)}
-                    {p.reviews ? ` (${p.reviews.toLocaleString("es")} reseñas)` : ""}
+                    {p.reviews ? ` (${p.reviews.toLocaleString("en-US")} reviews)` : ""}
                   </Text>
                 ) : null}
                 {p.followers ? <Text style={styles.calloutLine}>{fmt.followers(p.followers)} seguidores</Text> : null}

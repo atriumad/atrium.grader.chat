@@ -39,7 +39,7 @@ export function SlotChips({ slots, disabled, onPick }: { slots: Slot[]; disabled
           </View>
         </View>
       ))}
-      {zone ? <Text style={styles.zone}>Horarios en hora del {zone === "EST" || zone === "EDT" ? "Este de EE. UU." : zone} ({zone}).</Text> : null}
+      {zone ? <Text style={styles.zone}>Times shown in {zone === "EST" || zone === "EDT" ? "US Eastern time" : zone} ({zone}).</Text> : null}
     </View>
   )
 }

@@ -11,12 +11,12 @@ import { TONE_LABEL, type Tone } from "@/lib/admin/tone"
 type Hist = { id: number; value: unknown; note: string | null; at: string; by: string | null }
 
 const TOOLS: Array<{ key: keyof AgentConfig["tools"]; label: string; hint: string; costly?: boolean }> = [
-  { key: "liveSocial", label: "Redes sociales en vivo", hint: "Verifica seguidores y engagement actuales (Instagram, Facebook, TikTok, YouTube).", costly: true },
-  { key: "liveGoogle", label: "Google Maps en vivo", hint: "Rating y reseñas actuales de la ficha." },
-  { key: "seo", label: "SEO del sitio web", hint: "Revisa title, meta, datos estructurados, móvil, sitemap y velocidad de respuesta de la portada." },
-  { key: "ranking", label: "Ranking en Google", hint: "Busca una consulta típica de cliente y dice en qué posición sale el negocio.", costly: true },
-  { key: "knowledge", label: "Base de conocimiento", hint: "Busca en el material que subes en la sección Conocimiento." },
-  { key: "booking", label: "Agendar reuniones", hint: "Muestra horarios libres y propone la reunión con el equipo." },
+  { key: "liveSocial", label: "Live social stats", hint: "Checks current followers and engagement (Instagram, Facebook, TikTok, YouTube).", costly: true },
+  { key: "liveGoogle", label: "Live Google Maps", hint: "Current rating and reviews of the listing." },
+  { key: "seo", label: "Website SEO", hint: "Checks the homepage title, meta, structured data, mobile, sitemap and response speed." },
+  { key: "ranking", label: "Google ranking", hint: "Searches a typical customer query and says at what position the business shows up.", costly: true },
+  { key: "knowledge", label: "Knowledge base", hint: "Searches the material you upload in the Knowledge section." },
+  { key: "booking", label: "Book meetings", hint: "Shows free time slots and proposes the meeting with the team." },
 ]
 
 const same = (a: AgentConfig, b: AgentConfig) => JSON.stringify(a) === JSON.stringify(b)
@@ -41,20 +41,20 @@ export function AgentEditor({ initial, custom, updatedAt, updatedBy, history }: 
     const json = res ? await res.json().catch(() => ({})) : {}
     setBusy(false)
     if (res?.ok) {
-      setMsg({ ok: true, text: method === "PUT" ? "Publicado. Aplica a las conversaciones nuevas." : "Restablecido a los valores por defecto." })
+      setMsg({ ok: true, text: method === "PUT" ? "Published. Applies to new conversations." : "Reset to the default values." })
       setNote("")
       router.refresh()
       return true
     }
-    setMsg({ ok: false, text: json.error ?? "No se pudo guardar." })
+    setMsg({ ok: false, text: json.error ?? "Could not save." })
     return false
   }
 
   return (
     <div className="grid gap-6 xl:grid-cols-[1fr_22rem]">
       <div className="flex min-w-0 flex-col gap-6">
-        <Card title="Tono" hint="Cómo habla el agente con el usuario. Aplica al análisis escrito y al chat.">
-          <div role="radiogroup" aria-label="Tono" className="flex flex-wrap gap-2">
+        <Card title="Tone" hint="How the agent talks to the user. Applies to the written analysis and the chat.">
+          <div role="radiogroup" aria-label="Tone" className="flex flex-wrap gap-2">
             {(Object.keys(TONE_LABEL) as Tone[]).map((t) => (
               <button
                 key={t}
@@ -70,17 +70,17 @@ export function AgentEditor({ initial, custom, updatedAt, updatedBy, history }: 
           </div>
         </Card>
 
-        <Card title="Instrucciones del chat" hint="Reglas adicionales para el asistente que responde preguntas. No reemplazan las reglas de seguridad ni los datos del negocio. Ej.: 'Si preguntan por precios, ofrece una llamada y no des cifras'.">
-          <textarea className={textareaCls} rows={6} maxLength={4000} value={draft.chatInstructions} onChange={(e) => setDraft({ ...draft, chatInstructions: e.target.value })} placeholder="Sin instrucciones adicionales" />
+        <Card title="Chat instructions" hint="Extra rules for the assistant that answers questions. They do not replace the safety rules or the business data. E.g.: 'If they ask about prices, offer a call and do not give figures'.">
+          <textarea className={textareaCls} rows={6} maxLength={4000} value={draft.chatInstructions} onChange={(e) => setDraft({ ...draft, chatInstructions: e.target.value })} placeholder="No additional instructions" />
           <p className="mt-1 text-right text-xs text-muted-foreground tnum">{draft.chatInstructions.length}/4000</p>
         </Card>
 
-        <Card title="Instrucciones del análisis" hint="Reglas adicionales para el texto del diagnóstico. No cambian las tres secciones del reporte ni el puntaje.">
-          <textarea className={textareaCls} rows={6} maxLength={4000} value={draft.analysisInstructions} onChange={(e) => setDraft({ ...draft, analysisInstructions: e.target.value })} placeholder="Sin instrucciones adicionales" />
+        <Card title="Analysis instructions" hint="Extra rules for the diagnosis text. They do not change the report's three sections or the score.">
+          <textarea className={textareaCls} rows={6} maxLength={4000} value={draft.analysisInstructions} onChange={(e) => setDraft({ ...draft, analysisInstructions: e.target.value })} placeholder="No additional instructions" />
           <p className="mt-1 text-right text-xs text-muted-foreground tnum">{draft.analysisInstructions.length}/4000</p>
         </Card>
 
-        <Card title="Herramientas del chat" hint="Qué puede consultar o hacer el agente por su cuenta. Las marcadas consumen créditos de ScrapeCreators.">
+        <Card title="Chat tools" hint="What the agent can look up or do on its own. Those marked consume provider credits.">
           <ul className="flex flex-col divide-y">
             {TOOLS.map((t) => (
               <li key={t.key} className="py-3 first:pt-0 last:pb-0">
@@ -89,7 +89,7 @@ export function AgentEditor({ initial, custom, updatedAt, updatedBy, history }: 
                   <span className="flex flex-col gap-0.5 text-sm">
                     <span className="font-medium">
                       {t.label}
-                      {t.costly ? <span className="ml-2 rounded-full bg-secondary px-2 py-0.5 text-[0.6875rem] font-normal text-muted-foreground">consume créditos</span> : null}
+                      {t.costly ? <span className="ml-2 rounded-full bg-secondary px-2 py-0.5 text-[0.6875rem] font-normal text-muted-foreground">uses credits</span> : null}
                     </span>
                     <span className="text-muted-foreground text-pretty">{t.hint}</span>
                   </span>
@@ -99,35 +99,35 @@ export function AgentEditor({ initial, custom, updatedAt, updatedBy, history }: 
           </ul>
           <div className="mt-4 max-w-48">
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium">Máx. rondas de herramientas</span>
+              <span className="font-medium">Max tool rounds</span>
               <input type="number" min={2} max={12} className={inputCls} value={draft.maxToolRounds} onChange={(e) => setDraft({ ...draft, maxToolRounds: Number(e.target.value) || 8 })} />
-              <span className="text-xs text-muted-foreground">Tope de consultas encadenadas por respuesta (2–12).</span>
+              <span className="text-xs text-muted-foreground">Cap on chained lookups per answer (2–12).</span>
             </label>
           </div>
         </Card>
       </div>
 
       <aside className="flex flex-col gap-6 xl:sticky xl:top-6 xl:self-start">
-        <Card title="Publicar" hint={custom ? `Configuración personalizada${updatedAt ? ` · ${new Date(updatedAt).toLocaleString("es")}` : ""}${updatedBy ? ` · ${updatedBy}` : ""}` : "Hoy se usa el comportamiento por defecto."}>
+        <Card title="Publish" hint={custom ? `Custom configuration${updatedAt ? ` · ${new Date(updatedAt).toLocaleString("en-US")}` : ""}${updatedBy ? ` · ${updatedBy}` : ""}` : "The default behavior is in use today."}>
           <div className="flex flex-col gap-3">
-            <input className={inputCls} placeholder="Nota del cambio (opcional)" value={note} maxLength={200} onChange={(e) => setNote(e.target.value)} />
+            <input className={inputCls} placeholder="Change note (optional)" value={note} maxLength={200} onChange={(e) => setNote(e.target.value)} />
             <Button disabled={!dirty || busy} onClick={() => void call("PUT")}>
-              {busy ? "Guardando…" : dirty ? "Publicar cambios" : "Sin cambios"}
+              {busy ? "Saving…" : dirty ? "Publish changes" : "No changes"}
             </Button>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" disabled={!dirty || busy} onClick={() => setDraft(saved)}>
-                Descartar
+                Discard
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
                 disabled={busy || (!custom && same(sanitizeAgentConfig(draft), DEFAULT_AGENT_CONFIG))}
                 onClick={async () => {
-                  if (!window.confirm("¿Restablecer el comportamiento de los agentes a los valores por defecto?")) return
+                  if (!window.confirm("Reset the agents' behavior to the default values?")) return
                   if (await call("DELETE")) setDraft(DEFAULT_AGENT_CONFIG)
                 }}
               >
-                Valores por defecto
+                Defaults
               </Button>
             </div>
             {msg ? (
@@ -138,19 +138,19 @@ export function AgentEditor({ initial, custom, updatedAt, updatedBy, history }: 
           </div>
         </Card>
         {history.length ? (
-          <Card title="Historial">
+          <Card title="History">
             <ul className="flex flex-col divide-y">
               {history.map((h) => (
                 <li key={h.id} className="flex items-center justify-between gap-2 py-2 text-xs first:pt-0 last:pb-0">
                   <span className="min-w-0">
-                    <span className="block truncate">{h.note || "Cambio de configuración"}</span>
+                    <span className="block truncate">{h.note || "Configuration change"}</span>
                     <span className="text-muted-foreground">
-                      {new Date(h.at).toLocaleString("es", { dateStyle: "medium", timeStyle: "short" })}
+                      {new Date(h.at).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}
                       {h.by ? ` · ${h.by}` : ""}
                     </span>
                   </span>
                   <Button variant="ghost" size="xs" onClick={() => setDraft(sanitizeAgentConfig(h.value))}>
-                    Cargar
+                    Load
                   </Button>
                 </li>
               ))}
