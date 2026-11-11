@@ -1,5 +1,7 @@
 import type { AgentConfig, CallerConfig } from "./config.ts"
 import { PolicyError, requiresClientId, resolveAccess } from "./policy.ts"
+import type { Entity } from "@atrium/shared/types"
+import { groupByAccount, hasAccounts, type Grouped } from "@atrium/sources/competitors"
 import type { Registry, ToolResult } from "./tools/types.ts"
 import { failure } from "./tools/types.ts"
 import type { Confidence, Evidence, Gap, GapReason, ResearchEvent, ResearchRequest, ResearchResult, Subject } from "./types.ts"
@@ -8,6 +10,7 @@ export type RunDeps = { config: AgentConfig; registry: Registry; now?: () => num
 export type Emit = (event: ResearchEvent) => void
 
 const MAX_COMPETITOR_SOCIAL = 3
+const MAX_RIVAL_READS = 6 // hard cap on rival lookups, however many fold into one brand
 
 type Outcome = { kind: "ran"; result: ToolResult } | { kind: "skipped"; reason: GapReason }
 type Place = { id?: string; name?: string; address?: string; website?: string | null }
@@ -157,19 +160,36 @@ export async function runResearch(deps: RunDeps, caller: CallerConfig, request: 
     return finish()
   }
   facts.competitors = rivals
-  const rivalSocial = await Promise.all(
-    rivals.slice(0, MAX_COMPETITOR_SOCIAL).map(async (r, i) => ({
-      name: r.name,
-      outcome: await call("social_public", { name: r.name, address: r.address, website: r.website }, `rival-${i}`, `Leyendo las redes de ${r.name ?? "un competidor"}`),
-    }))
-  )
-  const read = rivalSocial.flatMap((r) => {
-    const data = r.outcome.kind === "ran" && r.outcome.result.status === "ok" ? r.outcome.result.data : undefined
-    return data ? [{ name: r.name, social: data }] : []
-  })
-  if (read.length) facts.competitorSocial = read
-  else {
-    const first = rivalSocial[0]?.outcome
+  // Reads rivals in rounds until MAX_COMPETITOR_SOCIAL distinct accounts are found: locations that
+  // share accounts with the business or with each other are folded, so they do not use up slots.
+  const me = asRecord(socialData)
+  const business = { name: place.name ?? "", place: null, instagram: me.instagram ?? null, instagramNote: "", networks: me.networks ?? [] } as unknown as Entity
+  const readRivals: Array<Entity & { social: unknown }> = []
+  const failures: Outcome[] = []
+  let grouped: Grouped = { competitors: [], sameBrandAsBusiness: 0, merged: 0 }
+  let cursor = 0
+  let need = MAX_COMPETITOR_SOCIAL
+  while (need > 0 && cursor < Math.min(rivals.length, MAX_RIVAL_READS)) {
+    const batch = rivals.slice(cursor, Math.min(cursor + need, MAX_RIVAL_READS))
+    const base = cursor
+    cursor += batch.length
+    const outcomes = await Promise.all(
+      batch.map((r, i) => call("social_public", { name: r.name, address: r.address, website: r.website }, `rival-${base + i}`, `Leyendo las redes de ${r.name ?? "un competidor"}`))
+    )
+    outcomes.forEach((o, i) => {
+      const data = o.kind === "ran" && o.result.status === "ok" ? asRecord(o.result.data) : undefined
+      if (!data) return void failures.push(o)
+      readRivals.push({ name: batch[i].name ?? "", place: null, instagram: (data.instagram ?? null) as Entity["instagram"], instagramNote: "", networks: (data.networks ?? []) as Entity["networks"], social: o.kind === "ran" ? o.result.data : undefined })
+    })
+    grouped = groupByAccount(business, readRivals)
+    need = MAX_COMPETITOR_SOCIAL - grouped.competitors.filter(hasAccounts).length
+    if (outcomes.every((o) => o.kind === "skipped")) break // budget or policy: another round cannot succeed
+  }
+  if (grouped.competitors.length) {
+    facts.competitorSocial = grouped.competitors.map((c) => ({ name: c.name, social: (c as Entity & { social?: unknown }).social }))
+    if (grouped.merged || grouped.sameBrandAsBusiness) facts.competitorGrouping = { merged: grouped.merged, sameBrandAsBusiness: grouped.sameBrandAsBusiness }
+  } else {
+    const first = failures[0]
     gaps.push(first?.kind === "ran" && first.result.status === "error" ? { fact: "competitorSocial", reason: "tool_failed", errorClass: first.result.errorClass } : { fact: "competitorSocial", reason: first?.kind === "skipped" ? first.reason : "no_data" })
   }
 

@@ -46,5 +46,5 @@ export const rivals = [
 export const happyTools = (calls: string[] = []): ToolDef[] => [
   tool("google_listing", async () => (calls.push("google_listing"), ok({ id: "p1", name: "Biz", address: "9 Main St", website: "https://biz.test" }))),
   tool("find_competitors", async () => (calls.push("find_competitors"), ok({ competitors: rivals }))),
-  tool("social_public", async (i) => (calls.push(`social_public:${String(i.name)}`), ok({ handle: `@${String(i.name).toLowerCase()}` }))),
+  tool("social_public", async (i) => (calls.push(`social_public:${String(i.name)}`), ok({ instagram: { handle: String(i.name).toLowerCase() }, networks: [] }))),
 ]

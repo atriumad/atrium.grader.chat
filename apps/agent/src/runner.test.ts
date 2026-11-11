@@ -95,3 +95,17 @@ test("the internal profile must name a client", async () => {
   const r = await runResearch({ config, registry: createRegistry(happyTools()) }, atrium, { ...req, subject: { ...req.subject, clientId: "c1" } }, () => {})
   assert.ok(r.facts.listing)
 })
+
+test("rival locations sharing accounts fold into one brand and do not use up the slots", async () => {
+  const many = ["A1", "A2", "B", "Biz2", "C", "D"].map((name) => ({ name, address: `${name} St`, website: `https://${name}.test` }))
+  const handles: Record<string, string> = { A1: "brand_a", A2: "brand_a", B: "brand_b", Biz2: "biz", C: "brand_c", D: "brand_d" }
+  const tools = happyTools().map((t) => {
+    if (t.name === "find_competitors") return tool("find_competitors", async () => ok({ competitors: many }))
+    if (t.name === "social_public") return tool("social_public", async (i) => ok({ instagram: { handle: i.name === "Biz" ? "biz" : handles[String(i.name)] }, networks: [] }))
+    return t
+  })
+  const r = await runResearch({ config, registry: createRegistry(tools) }, grader, req, () => {})
+  const social = r.facts.competitorSocial as { name: string }[]
+  assert.deepEqual(social.map((s) => s.name), ["A1 · 2 locales", "B", "C"]) // Biz2 is the business itself, A2 folded into A1
+  assert.deepEqual(r.facts.competitorGrouping, { merged: 1, sameBrandAsBusiness: 1 })
+})
