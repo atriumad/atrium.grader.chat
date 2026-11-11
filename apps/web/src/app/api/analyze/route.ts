@@ -9,6 +9,7 @@ import {
   parseInstagramInput,
   type InstagramExtras,
 } from "@/lib/socials"
+import { agentEnabled, researchViaAgent, type AgentResearch } from "@/lib/agent-client"
 import { groupByAccount, groupNote, hasAccounts, type Grouped } from "@/lib/competitors"
 import { streamAnalysis, type Dataset, type Entity } from "@/lib/analysis"
 import { getAgent, getScoring } from "@/lib/admin/config"
@@ -220,62 +221,89 @@ export async function POST(req: Request) {
             generatedAt: new Date().toISOString(),
           }
         } else {
-          // ---- Mode B: starts from the business name (Google Places) ----
-          let business: Place | null = null
-          let pickedByUser = false
-
-          if (placeId) {
-            // The user already chose a specific location from the list.
-            send({ type: "status", text: "Abriendo el local que elegiste..." })
-            business = await getPlace(placeId)
-            pickedByUser = true
-            if (!business) {
-              send({ type: "error", text: "No pude abrir ese local. Vuelve a buscarlo." })
-              return
+          // ---- Mode B: starts from the business name ----
+          // With ANALYZE_VIA_AGENT=1 the research service does the lookups; if it is off, fails, or
+          // cannot pick one location, the grader's own flow below runs as before.
+          let viaAgent: AgentResearch | null = null
+          if (agentEnabled()) {
+            send({ type: "status", text: "Investigando tu negocio..." })
+            viaAgent = await researchViaAgent(placeId ? { placeId } : { name: query }, (s) => {
+              if (s.id === "google" || s.id === "competitors") step(s.id, s.label, s.state === "running" ? "running" : s.state === "skipped" ? "skipped" : "done", s.meta)
+              else if (s.id === "social" || s.id.startsWith("rival-")) step("social", "Leyendo las redes de tu negocio y la competencia", "running")
+            })
+          }
+          if (viaAgent) {
+            step("social", "Redes sociales leídas", "done", `${[viaAgent.business, ...viaAgent.competitors].filter(hasAccounts).length} negocios con cuentas`)
+            lookupCtx.business = viaAgent.business.name
+            data = {
+              mode: "business_name",
+              queried: query,
+              identification: placeId
+                ? `Local elegido por el usuario en Google Maps: ${viaAgent.business.place?.name}, ${viaAgent.business.place?.address}`
+                : `Coincidencia clara en Google Maps para "${query}": ${viaAgent.business.place?.name}, ${viaAgent.business.place?.address}`,
+              business: viaAgent.business,
+              competitorsSource: `negocios cercanos del mismo tipo en Google Maps (radio 3 km)${viaAgent.note}`,
+              competitors: viaAgent.competitors,
+              generatedAt: new Date().toISOString(),
             }
           } else {
-            send({ type: "status", text: "Buscando tu negocio en Google..." })
-            const candidates = await findCandidates(query, 5)
-            const decision = decide(query, candidates)
-            if (decision.action === "none") {
-              send({ type: "error", text: "No encontré ese negocio. Prueba con nombre y ciudad, o con su @ de Instagram." })
-              return
-            }
-            if (decision.action === "ask") {
-              send({ type: "choices", reason: decision.reason, text: decision.message, options: decision.options })
-              return
-            }
-            business = decision.place
-          }
-          send({ type: "status", text: `Encontré: ${business.name} (${business.address}). Buscando competidores...` })
-          step("google", "Ficha de Google leída", "done", placeMeta(business))
-          lookupCtx.business = business.name
-          step("competitors", "Buscando competidores cercanos", "running")
-          const competitorPlaces = await findCompetitors(business)
-          step("competitors", "Competidores encontrados", "done", `${competitorPlaces.length} en 3 km`)
+            let business: Place | null = null
+            let pickedByUser = false
 
-          send({ type: "status", text: "Leyendo las redes sociales de tu negocio y de la competencia..." })
-          step("social", "Leyendo las redes de tu negocio y la competencia", "running")
-          const read = makeReader()
-          const businessPromise = read(business)
-          const [businessEntity, result] = await Promise.all([
-            businessPromise,
-            analyzeCompetitors(businessPromise, competitorPlaces, read),
-          ])
-          const competitorEntities = result.competitors
-          const withAccounts = [businessEntity, ...competitorEntities].filter(hasAccounts).length
-          step("social", "Redes sociales leídas", "done", `${withAccounts} negocios con cuentas`)
+            if (placeId) {
+              // The user already chose a specific location from the list.
+              send({ type: "status", text: "Abriendo el local que elegiste..." })
+              business = await getPlace(placeId)
+              pickedByUser = true
+              if (!business) {
+                send({ type: "error", text: "No pude abrir ese local. Vuelve a buscarlo." })
+                return
+              }
+            } else {
+              send({ type: "status", text: "Buscando tu negocio en Google..." })
+              const candidates = await findCandidates(query, 5)
+              const decision = decide(query, candidates)
+              if (decision.action === "none") {
+                send({ type: "error", text: "No encontré ese negocio. Prueba con nombre y ciudad, o con su @ de Instagram." })
+                return
+              }
+              if (decision.action === "ask") {
+                send({ type: "choices", reason: decision.reason, text: decision.message, options: decision.options })
+                return
+              }
+              business = decision.place
+            }
+            send({ type: "status", text: `Encontré: ${business.name} (${business.address}). Buscando competidores...` })
+            step("google", "Ficha de Google leída", "done", placeMeta(business))
+            lookupCtx.business = business.name
+            step("competitors", "Buscando competidores cercanos", "running")
+            const competitorPlaces = await findCompetitors(business)
+            step("competitors", "Competidores encontrados", "done", `${competitorPlaces.length} en 3 km`)
 
-          data = {
-            mode: "business_name",
-            queried: query,
-            identification: pickedByUser
-              ? `Local elegido por el usuario en Google Maps: ${business.name}, ${business.address}`
-              : `Coincidencia clara en Google Maps para "${query}": ${business.name}, ${business.address}`,
-            business: businessEntity,
-            competitorsSource: `negocios cercanos del mismo tipo en Google Maps (radio 3 km)${groupNote(result.grouped)}`,
-            competitors: competitorEntities,
-            generatedAt: new Date().toISOString(),
+            send({ type: "status", text: "Leyendo las redes sociales de tu negocio y de la competencia..." })
+            step("social", "Leyendo las redes de tu negocio y la competencia", "running")
+            const read = makeReader()
+            const businessPromise = read(business)
+            const [businessEntity, result] = await Promise.all([
+              businessPromise,
+              analyzeCompetitors(businessPromise, competitorPlaces, read),
+            ])
+            const competitorEntities = result.competitors
+            const withAccounts = [businessEntity, ...competitorEntities].filter(hasAccounts).length
+            step("social", "Redes sociales leídas", "done", `${withAccounts} negocios con cuentas`)
+
+            data = {
+              mode: "business_name",
+              queried: query,
+              identification: pickedByUser
+                ? `Local elegido por el usuario en Google Maps: ${business.name}, ${business.address}`
+                : `Coincidencia clara en Google Maps para "${query}": ${business.name}, ${business.address}`,
+              business: businessEntity,
+              competitorsSource: `negocios cercanos del mismo tipo en Google Maps (radio 3 km)${groupNote(result.grouped)}`,
+              competitors: competitorEntities,
+              generatedAt: new Date().toISOString(),
+            }
+
           }
         }
 

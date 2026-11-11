@@ -119,3 +119,16 @@ test("website_audit runs inside the subject's host only", async () => {
   assert.deepEqual(seen, ["biz.test"])
   assert.ok(r.facts.websiteAudit)
 })
+
+test("a provider that is out of credits stops the rival rounds instead of failing every rival", async () => {
+  const many = ["A", "B", "C", "D", "E", "F"].map((name) => ({ name, address: `${name} St`, website: `https://${name}.test` }))
+  let socialCalls = 0
+  const tools = happyTools().map((t) => {
+    if (t.name === "find_competitors") return tool("find_competitors", async () => ok({ competitors: many }))
+    if (t.name === "social_public") return tool("social_public", async () => (socialCalls++, failure("out_of_credits")))
+    return t
+  })
+  const r = await runResearch({ config, registry: createRegistry(tools) }, grader, req, () => {})
+  assert.equal(socialCalls, 1 + 3) // the business plus one round of 3 rivals, no more
+  assert.ok(r.gaps.some((g) => g.fact === "competitorSocial" && g.errorClass === "out_of_credits"))
+})

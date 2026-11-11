@@ -183,14 +183,17 @@ export async function runResearch(deps: RunDeps, caller: CallerConfig, request: 
     outcomes.forEach((o, i) => {
       const data = o.kind === "ran" && o.result.status === "ok" ? asRecord(o.result.data) : undefined
       if (!data) return void failures.push(o)
-      readRivals.push({ name: batch[i].name ?? "", place: null, instagram: (data.instagram ?? null) as Entity["instagram"], instagramNote: "", networks: (data.networks ?? []) as Entity["networks"], social: o.kind === "ran" ? o.result.data : undefined })
+      readRivals.push({ name: batch[i].name ?? "", place: batch[i] as unknown as Entity["place"], instagram: (data.instagram ?? null) as Entity["instagram"], instagramNote: "", networks: (data.networks ?? []) as Entity["networks"], social: o.kind === "ran" ? o.result.data : undefined })
     })
     grouped = groupByAccount(business, readRivals)
     need = MAX_COMPETITOR_SOCIAL - grouped.competitors.filter(hasAccounts).length
     if (outcomes.every((o) => o.kind === "skipped")) break // budget or policy: another round cannot succeed
+    // The provider itself is down (no credits, rate limited): more rivals would fail the same way.
+    if (outcomes.every((o) => o.kind === "ran" && o.result.status === "error" && (o.result.errorClass === "out_of_credits" || o.result.errorClass === "rate_limited"))) break
   }
   if (grouped.competitors.length) {
-    facts.competitorSocial = grouped.competitors.map((c) => ({ name: c.name, social: (c as Entity & { social?: unknown }).social }))
+    facts.competitorSocial = grouped.competitors.map((c) => ({ name: c.name, place: c.place, social: (c as Entity & { social?: unknown }).social }))
+    facts.competitorsRead = readRivals.map((r) => r.place?.id) // read, whether kept or folded into another brand
     if (grouped.merged || grouped.sameBrandAsBusiness) facts.competitorGrouping = { merged: grouped.merged, sameBrandAsBusiness: grouped.sameBrandAsBusiness }
   } else {
     const first = failures[0]
