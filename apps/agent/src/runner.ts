@@ -27,6 +27,7 @@ export async function runResearch(deps: RunDeps, caller: CallerConfig, request: 
   if (request.type !== "business_profile") throw new PolicyError(501, `request type not implemented yet: ${request.type}`)
   if (requiresClientId(config, caller) && !request.subject.clientId) throw new PolicyError(400, "subject.clientId is required for this caller")
 
+  const basic = request.options?.depth === "basic"
   const startedAt = now()
   const evidence: Evidence[] = []
   const gaps: Gap[] = []
@@ -46,7 +47,7 @@ export async function runResearch(deps: RunDeps, caller: CallerConfig, request: 
   async function call(tool: string, input: Record<string, unknown>, id: string, label: string): Promise<Outcome> {
     const denied = access.denied.get(tool)
     if (denied || !access.tools.has(tool)) {
-      emit({ type: "step", id, label, state: "skipped", meta: denied === "disabled" ? "desactivada" : "no disponible" })
+      emit({ type: "step", id, label, state: "skipped", meta: denied === "disabled" ? "disabled" : "unavailable" })
       return { kind: "skipped", reason: denied ?? "not_permitted" }
     }
     const def = registry.get(tool)
@@ -62,7 +63,7 @@ export async function runResearch(deps: RunDeps, caller: CallerConfig, request: 
       return { kind: "ran", result: hit }
     }
     if (!budgetLeft(estimate)) {
-      emit({ type: "step", id, label, state: "skipped", meta: "presupuesto agotado" })
+      emit({ type: "step", id, label, state: "skipped", meta: "budget exhausted" })
       return { kind: "skipped", reason: "budget" }
     }
 
@@ -124,7 +125,7 @@ export async function runResearch(deps: RunDeps, caller: CallerConfig, request: 
 
   // 1. Identify the business.
   const listingInput = subject.placeId ? { placeId: subject.placeId } : { name: subject.name, city: subject.city }
-  const listing = take("listing", await call("google_listing", listingInput, "google", "Leyendo la ficha pública"))
+  const listing = take("listing", await call("google_listing", listingInput, "google", "Reading the public listing"))
   const listingData = asRecord(listing)
   if (Array.isArray(listingData.needsChoice)) return finish({ needsChoice: listingData.needsChoice })
   if (!listing) {
@@ -138,9 +139,9 @@ export async function runResearch(deps: RunDeps, caller: CallerConfig, request: 
 
   // 2. Business social, competitors and website, independent of each other.
   const [social, competitors, website] = await Promise.all([
-    call("social_public", { name: place.name, address: place.address, website: place.website }, "social", "Leyendo las redes del negocio"),
-    call("find_competitors", { placeId: place.id }, "competitors", "Buscando competidores cercanos"),
-    place.website ? call("website_audit", { url: place.website, name: place.name, city: place.address?.split(",")[1]?.trim() }, "website", "Revisando el sitio web") : Promise.resolve<Outcome>({ kind: "skipped", reason: "no_data" }),
+    call("social_public", { name: place.name, address: place.address, website: place.website, instagramOnly: basic }, "social", "Reading the business's networks"),
+    call("find_competitors", { placeId: place.id }, "competitors", "Looking for nearby competitors"),
+    basic ? Promise.resolve<Outcome>({ kind: "skipped", reason: "depth" }) : place.website ? call("website_audit", { url: place.website, name: place.name, city: place.address?.split(",")[1]?.trim() }, "website", "Checking the website") : Promise.resolve<Outcome>({ kind: "skipped", reason: "no_data" }),
   ])
   const socialData = take("social", social)
   if (socialData) facts.social = socialData
@@ -178,7 +179,7 @@ export async function runResearch(deps: RunDeps, caller: CallerConfig, request: 
     const base = cursor
     cursor += batch.length
     const outcomes = await Promise.all(
-      batch.map((r, i) => call("social_public", { name: r.name, address: r.address, website: r.website }, `rival-${base + i}`, `Leyendo las redes de ${r.name ?? "un competidor"}`))
+      batch.map((r, i) => call("social_public", { name: r.name, address: r.address, website: r.website, instagramOnly: true }, `rival-${base + i}`, `Reading the networks of ${r.name ?? "a competitor"}`))
     )
     outcomes.forEach((o, i) => {
       const data = o.kind === "ran" && o.result.status === "ok" ? asRecord(o.result.data) : undefined

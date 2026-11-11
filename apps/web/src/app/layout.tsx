@@ -20,13 +20,13 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Atrium Grader",
-  description: "Compara tu restaurante con la competencia en Google y redes sociales",
+  description: "Compare your restaurant with the competition on Google and social media",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
-      lang="es"
+      lang="en"
       className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>

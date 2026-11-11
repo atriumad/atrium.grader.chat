@@ -30,7 +30,7 @@ export function chunkText(text: string): string[] {
 }
 
 export async function extractText(file: File): Promise<string> {
-  if (file.size > MAX_FILE_BYTES) throw new Error("El archivo pesa más de 5 MB.")
+  if (file.size > MAX_FILE_BYTES) throw new Error("The file is larger than 5 MB.")
   const name = file.name.toLowerCase()
   if (name.endsWith(".pdf") || file.type === "application/pdf") {
     const { extractText: pdfText, getDocumentProxy } = await import("unpdf")
@@ -41,7 +41,7 @@ export async function extractText(file: File): Promise<string> {
   if (/\.(txt|md|markdown|csv|json)$/.test(name) || file.type.startsWith("text/") || file.type === "application/json") {
     return await file.text()
   }
-  throw new Error("Formato no soportado. Sube PDF, TXT, MD, CSV o JSON, o pega el texto.")
+  throw new Error("Unsupported format. Upload PDF, TXT, MD, CSV or JSON, or paste the text.")
 }
 
 export async function addDoc(input: {
@@ -54,11 +54,11 @@ export async function addDoc(input: {
   by: string
 }) {
   const content = input.content.replace(/\u0000/g, "").trim().slice(0, MAX_TEXT_CHARS)
-  if (content.length < 20) throw new Error("El contenido es muy corto o no se pudo leer texto del archivo.")
+  if (content.length < 20) throw new Error("The content is too short or no text could be read from the file.")
   const { data, error } = await db()
     .from("knowledge_docs")
     .insert({
-      title: input.title.trim().slice(0, 160) || "Sin título",
+      title: input.title.trim().slice(0, 160) || "Untitled",
       kind: input.kind ?? "note",
       source_name: input.sourceName ?? null,
       content,

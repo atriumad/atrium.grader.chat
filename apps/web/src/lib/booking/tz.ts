@@ -33,8 +33,8 @@ export function zonedToUtc(y: number, m: number, d: number, h: number, min: numb
 }
 
 export function formatSlot(date: Date, tz: string): string {
-  const day = new Intl.DateTimeFormat("es-US", { timeZone: tz, weekday: "long", day: "numeric", month: "long" }).format(date)
-  const time = new Intl.DateTimeFormat("es-US", { timeZone: tz, hour: "numeric", minute: "2-digit", hour12: true }).format(date)
+  const day = new Intl.DateTimeFormat("en-US", { timeZone: tz, weekday: "long", day: "numeric", month: "long" }).format(date)
+  const time = new Intl.DateTimeFormat("en-US", { timeZone: tz, hour: "numeric", minute: "2-digit", hour12: true }).format(date)
   const abbr = new Intl.DateTimeFormat("en-US", { timeZone: tz, timeZoneName: "short" })
     .formatToParts(date)
     .find((p) => p.type === "timeZoneName")?.value

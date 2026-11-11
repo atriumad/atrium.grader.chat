@@ -19,10 +19,10 @@ async function LoginContent({ searchParams }: { searchParams: Promise<{ error?: 
     <main className="mx-auto flex min-h-svh w-full max-w-sm flex-col justify-center gap-6 px-4">
       <div className="flex flex-col gap-1.5">
         <span className="font-display text-lg leading-none">Atrium</span>
-        <h1 className="font-display text-3xl leading-tight">Panel administrativo</h1>
-        <p className="text-sm text-muted-foreground">Te enviamos un enlace al correo para entrar. Solo funciona con correos autorizados.</p>
+        <h1 className="font-display text-3xl leading-tight">Admin panel</h1>
+        <p className="text-sm text-muted-foreground">We sent a sign-in link to your email. It only works with authorized emails.</p>
       </div>
-      {error ? <p role="alert" className="text-sm text-destructive">El enlace no es válido o venció. Pide uno nuevo.</p> : null}
+      {error ? <p role="alert" className="text-sm text-destructive">The link is invalid or has expired. Request a new one.</p> : null}
       <LoginForm />
     </main>
   )

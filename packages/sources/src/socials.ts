@@ -2,6 +2,8 @@
 // through ScrapeCreators for Instagram, Facebook, TikTok and YouTube.
 import type { NetworkStats, Network } from "@atrium/shared/types"
 import { fuzzyEq, tokens } from "./match.ts"
+import { cached, socialTtl } from "./cache.ts"
+import { apifyEnabled, facebookShaped, googleSearchShaped, instagramShaped, tiktokShaped, youtubeShaped } from "./apify.ts"
 
 const BASE = "https://api.scrapecreators.com"
 
@@ -22,7 +24,7 @@ const FB_RESERVED = new Set([
 ])
 
 const NETWORKS_ON = () =>
-  new Set((process.env.SOCIAL_NETWORKS ?? "instagram,facebook,tiktok,youtube").split(",").map((x) => x.trim().toLowerCase()))
+  new Set((process.env.SOCIAL_NETWORKS ?? "instagram,facebook,tiktok").split(",").map((x) => x.trim().toLowerCase()))
 
 export function parseSocialLinks(html: string): SocialLinks {
   const links: SocialLinks = { instagram: null, facebook: null, tiktok: null, youtube: null }
@@ -48,22 +50,33 @@ export function parseSocialLinks(html: string): SocialLinks {
   return links
 }
 
+// A blocked or unreachable website (403, timeout) says nothing about the business: it must not be
+// cached as "this business has no social links".
+const unreachable = new WeakSet<SocialLinks>()
+class SiteUnreachable extends Error {
+  links: SocialLinks
+  constructor(links: SocialLinks) {
+    super("website unreachable")
+    this.links = links
+  }
+}
+
 // One fetch of the business website finds every social link on it.
 async function findSocialLinksOnce(website: string | null): Promise<SocialLinks> {
   const none: SocialLinks = { instagram: null, facebook: null, tiktok: null, youtube: null }
   if (!website) {
-    logLookup({ kind: "links", target: null, ok: false, summary: { reason: "sin sitio web" } })
+    logLookup({ kind: "links", target: null, ok: false, summary: { reason: "no website" } })
     return none
   }
   const t0 = Date.now()
   try {
-    const res = await fetch(website, {
+    const res = await safeFetch(website.startsWith("http") ? website : `https://${website}`, {
       signal: AbortSignal.timeout(6_000),
       headers: { "User-Agent": "Mozilla/5.0 (compatible; AtriumGrader/0.1)" },
-      redirect: "follow",
     })
     if (!res.ok) {
-      logLookup({ kind: "links", target: website, ok: false, status: res.status, durationMs: Date.now() - t0, summary: { reason: `el sitio respondió ${res.status}` } })
+      logLookup({ kind: "links", target: website, ok: false, status: res.status, durationMs: Date.now() - t0, summary: { reason: `the site responded ${res.status}` } })
+      unreachable.add(none)
       return none
     }
     const html = (await res.text()).slice(0, 2_000_000)
@@ -74,7 +87,8 @@ async function findSocialLinksOnce(website: string | null): Promise<SocialLinks>
     })
     return links
   } catch (e) {
-    logLookup({ kind: "links", target: website, ok: false, durationMs: Date.now() - t0, error: e instanceof Error ? e.message : String(e), summary: { reason: "sitio inaccesible o bloqueado" } })
+    logLookup({ kind: "links", target: website, ok: false, durationMs: Date.now() - t0, error: e instanceof Error ? e.message : String(e), summary: { reason: "site unreachable or blocked" } })
+    unreachable.add(none)
     return none // website unreachable or blocked: no links
   }
 }
@@ -85,13 +99,33 @@ async function findSocialLinksOnce(website: string | null): Promise<SocialLinks>
 // Tries the given page; if it has no Instagram link and is a subpage ("/locations"),
 // tries the site's home page too.
 export async function findSocialLinks(website: string | null): Promise<SocialLinks> {
+  if (!website) return findSocialLinksUncached(website)
+  // A copy: callers fill in missing links (readSocials) and must not edit what the cache holds.
+  const key = `links:${website.toLowerCase().replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")}`
+  try {
+    return {
+      ...(await cached(key, socialTtl(7), async () => {
+        const links = await findSocialLinksUncached(website)
+        if (unreachable.has(links)) throw new SiteUnreachable(links) // thrown so the cache stores nothing
+        return links
+      })),
+    }
+  } catch (e) {
+    if (e instanceof SiteUnreachable) return { ...e.links }
+    throw e
+  }
+}
+
+async function findSocialLinksUncached(website: string | null): Promise<SocialLinks> {
   const links = await findSocialLinksOnce(website)
   if (links.instagram || !website) return links
   try {
     const u = new URL(website.startsWith("http") ? website : `https://${website}`)
     if (u.pathname.length > 1) {
       const home = await findSocialLinksOnce(u.origin)
-      return { instagram: home.instagram, facebook: links.facebook ?? home.facebook, tiktok: links.tiktok ?? home.tiktok, youtube: links.youtube ?? home.youtube }
+      const merged = { instagram: home.instagram, facebook: links.facebook ?? home.facebook, tiktok: links.tiktok ?? home.tiktok, youtube: links.youtube ?? home.youtube }
+      if (unreachable.has(links) && unreachable.has(home)) unreachable.add(merged)
+      return merged
     }
   } catch {}
   return links
@@ -99,19 +133,32 @@ export async function findSocialLinks(website: string | null): Promise<SocialLin
 
 export async function searchInstagramHandle(name: string, address: string): Promise<string | null> {
   const city = address.split(",").slice(-3, -2)[0]?.trim() ?? ""
+  return cached(`igsearch:${tokens(name).join(" ")}|${city.toLowerCase()}`, socialTtl(30), () => searchInstagramHandleUncached(name, city))
+}
+
+async function searchInstagramHandleUncached(name: string, city: string): Promise<string | null> {
   // A provider failure throws (see classifyError); only "no matching profile" returns null.
-  const data: { results?: { title?: string; url?: string }[] } = await sc("/v1/google/search", {
-    query: `${name} ${city} instagram`.trim(),
-    country: "us",
-    language: "en",
-  })
+  const query = `${name} ${city} instagram`.trim()
+  const data: { results?: { title?: string; url?: string }[] } = apifyEnabled()
+    ? await googleSearchShaped(query)
+    : await sc("/v1/google/search", { query, country: "us", language: "en" })
+  const want = tokens(name)
+  return pickInstagramHandle(data.results ?? [], name)
+}
+
+// Google often answers with a post or reel instead of the profile, so the handle is read from
+// the profile URL, from a post URL under the handle (instagram.com/<handle>/p/...), or from the
+// title ("Name (@handle)"). It is accepted only if the title and handle contain every word of the name.
+export function pickInstagramHandle(results: { title?: string; url?: string }[], name: string): string | null {
   const want = tokens(name)
   if (!want.length) return null
-  for (const r of data.results ?? []) {
-    const m = r.url?.match(/^https?:\/\/(?:www\.)?instagram\.com\/([A-Za-z0-9._]{1,30})\/?(?:\?|$)/i)
-    if (!m || IG_RESERVED.has(m[1].toLowerCase())) continue
-    const title = tokens(`${r.title ?? ""} ${m[1]}`)
-    if (want.every((w) => title.some((t) => fuzzyEq(w, t)))) return m[1].replace(/\.$/, "")
+  for (const r of results) {
+    const m = r.url?.match(/^https?:\/\/(?:www\.)?instagram\.com\/([A-Za-z0-9._]{1,30})(?:\/(?:p|reel|reels|tv)\/[^?#]*)?\/?(?:[?#]|$)/i)
+    const fromTitle = r.title?.match(/\(@([A-Za-z0-9._]{1,30})\)/)?.[1]
+    const handle = m && !IG_RESERVED.has(m[1].toLowerCase()) ? m[1] : r.url?.match(/^https?:\/\/(?:www\.)?instagram\.com\//i) ? fromTitle : null
+    if (!handle) continue
+    const title = tokens(`${r.title ?? ""} ${handle}`)
+    if (want.every((w) => title.some((t) => fuzzyEq(w, t)))) return handle.replace(/\.$/, "")
   }
   return null
 }
@@ -122,7 +169,7 @@ export async function findInstagramHandle(website: string | null): Promise<strin
 
 export async function sc(path: string, params: Record<string, string>) {
   const key = process.env.SCRAPECREATORS_API_KEY
-  if (!key) throw new Error("Falta SCRAPECREATORS_API_KEY")
+  if (!key) throw new Error("SCRAPECREATORS_API_KEY is missing")
   const url = `${BASE}${path}?${new URLSearchParams(params)}`
   const target = params.handle ?? params.url ?? params.query ?? null
   const t0 = Date.now()
@@ -154,6 +201,7 @@ export async function sc(path: string, params: Record<string, string>) {
 }
 
 import { logEvent, logLookup } from "./log.ts"
+import { safeFetch } from "./safe-fetch.ts"
 import type { InstagramStats } from "@atrium/shared/types"
 export type { InstagramStats }
 
@@ -190,10 +238,18 @@ export async function getInstagramStats(handle: string): Promise<InstagramStats>
 export async function getInstagramSnapshot(
   handle: string
 ): Promise<{ stats: InstagramStats; extras: InstagramExtras }> {
-  const [profile, posts] = await Promise.all([
-    sc("/v1/instagram/profile", { handle, trim: "true", cache_max_age: "7d" }),
-    sc("/v2/instagram/user/posts", { handle, trim: "true" }),
-  ])
+  return cached(`ig:${handle.toLowerCase()}`, socialTtl(7), () => fetchInstagramSnapshot(handle))
+}
+
+async function fetchInstagramSnapshot(
+  handle: string
+): Promise<{ stats: InstagramStats; extras: InstagramExtras }> {
+  const { profile, posts } = apifyEnabled()
+    ? await instagramShaped(handle)
+    : await Promise.all([
+        sc("/v1/instagram/profile", { handle, trim: "true", cache_max_age: "7d" }),
+        sc("/v2/instagram/user/posts", { handle, trim: "true" }),
+      ]).then(([profile, posts]) => ({ profile, posts }))
 
   const user = profile?.data?.user ?? {}
   const followers: number | null = user?.edge_followed_by?.count ?? null
@@ -262,7 +318,7 @@ export async function getInstagramSnapshot(
 
   logLookup({
     kind: "network", target: `Instagram: @${handle}`, ok: followers !== null,
-    summary: { resultado: followers !== null ? "leída" : "sin seguidores en la respuesta", ...stats },
+    summary: { result: followers !== null ? "read" : "no followers in the response", ...stats },
   })
   return { stats, extras }
 }
@@ -322,10 +378,16 @@ const numOrNull = (v: unknown): number | null => {
 }
 
 export async function getTikTokStats(handle: string): Promise<NetworkStats> {
-  const [profile, videos] = await Promise.all([
-    sc("/v1/tiktok/profile", { handle, cache_max_age: "7d" }),
-    sc("/v3/tiktok/profile/videos", { handle, trim: "true" }),
-  ])
+  return cached(`tt:${handle.toLowerCase()}`, socialTtl(7), () => fetchTikTokStats(handle))
+}
+
+async function fetchTikTokStats(handle: string): Promise<NetworkStats> {
+  const { profile, videos } = apifyEnabled()
+    ? await tiktokShaped(handle)
+    : await Promise.all([
+        sc("/v1/tiktok/profile", { handle, cache_max_age: "7d" }),
+        sc("/v3/tiktok/profile/videos", { handle, trim: "true" }),
+      ]).then(([profile, videos]) => ({ profile, videos }))
   const followers = numOrNull(profile?.stats?.followerCount ?? profile?.user?.stats?.followerCount)
   const list: Array<Record<string, any>> = Array.isArray(videos?.aweme_list) ? videos.aweme_list : []
   return summarize(
@@ -342,10 +404,13 @@ export async function getTikTokStats(handle: string): Promise<NetworkStats> {
 }
 
 export async function getFacebookStats(url: string): Promise<NetworkStats> {
-  const [profile, posts] = await Promise.all([
-    sc("/v1/facebook/profile", { url }),
-    sc("/v1/facebook/profile/posts", { url }),
-  ])
+  return cached(`fb:${url.toLowerCase().replace(/\/$/, "")}`, socialTtl(7), () => fetchFacebookStats(url))
+}
+
+async function fetchFacebookStats(url: string): Promise<NetworkStats> {
+  const { profile, posts } = apifyEnabled()
+    ? await facebookShaped(url)
+    : await Promise.all([sc("/v1/facebook/profile", { url }), sc("/v1/facebook/profile/posts", { url })]).then(([profile, posts]) => ({ profile, posts }))
   if (profile?.success === false) throw new Error(profile?.message ?? "perfil no disponible")
   const list: Array<Record<string, any>> = Array.isArray(posts?.posts) ? posts.posts : []
   return summarize(
@@ -364,11 +429,13 @@ export async function getFacebookStats(url: string): Promise<NetworkStats> {
 const YT_SAMPLE = 12
 
 export async function getYouTubeStats(url: string): Promise<NetworkStats> {
-  const [channel, videos] = await Promise.all([
-    sc("/v1/youtube/channel", { url, cache_max_age: "7d" }),
-    // channel-videos takes handle / channelId, not url: derive it from the link.
-    sc("/v1/youtube/channel-videos", youtubeRef(url)),
-  ])
+  const { channel, videos } = apifyEnabled()
+    ? await youtubeShaped(url)
+    : await Promise.all([
+        sc("/v1/youtube/channel", { url, cache_max_age: "7d" }),
+        // channel-videos takes handle / channelId, not url: derive it from the link.
+        sc("/v1/youtube/channel-videos", youtubeRef(url)),
+      ]).then(([channel, videos]) => ({ channel, videos }))
   const list: Array<Record<string, any>> = Array.isArray(videos?.videos) ? videos.videos.slice(0, YT_SAMPLE) : []
   return summarize(
     "youtube",
@@ -416,16 +483,16 @@ export async function getNetworkStats(
       logLookup({ kind: "network", target: `${name}: ${jobs[i].target}`, ok, summary, error })
     if (r.status === "rejected") {
       failed.push(`${name} no disponible`)
-      log(false, { resultado: "falló la consulta" }, r.reason instanceof Error ? r.reason.message : String(r.reason))
+      log(false, { result: "lookup failed" }, r.reason instanceof Error ? r.reason.message : String(r.reason))
     } else if (r.value.postsSampled === 0) {
       failed.push(`${name} sin posts visibles`)
-      log(false, { resultado: "descartada: sin posts visibles", ...r.value })
+      log(false, { result: "discarded: no visible posts", ...r.value })
     } else if (isAbandoned(r.value)) {
-      failed.push(`${name} (${r.value.handle}) parece abandonado o no es la cuenta del negocio`)
-      log(false, { resultado: "descartada: abandonada o no es del negocio", ...r.value })
+      failed.push(`${name} (${r.value.handle}) looks abandoned or is not the business's account`)
+      log(false, { result: "discarded: abandoned or not the business's", ...r.value })
     } else {
       networks.push(r.value)
-      log(true, { resultado: "usada en el diagnóstico", ...r.value })
+      log(true, { result: "used in the diagnosis", ...r.value })
     }
   })
   return { networks, note: failed.length ? failed.join("; ") : undefined }

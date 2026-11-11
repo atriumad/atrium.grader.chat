@@ -6,7 +6,7 @@ import type { Slot } from "@/lib/chat/types"
 
 // Real free times from the agency calendar. Tapping one tells the assistant which one.
 export function SlotChips({ slots, disabled, onPick }: { slots: Slot[]; disabled: boolean; onPick: (s: Slot) => void }) {
-  // Labels look like "viernes, 6 de noviembre, 9:00 a.m. (EST)". The day goes in the heading,
+  // Labels look like "Friday, November 6, 9:00 AM (EST)". The day goes in the heading,
   // each button shows only the time, and the time zone is said once.
   const days = new Map<string, Slot[]>()
   for (const s of slots) {
@@ -16,7 +16,7 @@ export function SlotChips({ slots, disabled, onPick }: { slots: Slot[]; disabled
   }
   const zone = slots[0]?.label.match(/\(([^)]+)\)\s*$/)?.[1]
   return (
-    <div className="report-rise flex max-w-[68ch] flex-col gap-4" role="group" aria-label="Horarios disponibles">
+    <div className="report-rise flex max-w-[68ch] flex-col gap-4" role="group" aria-label="Available times">
       {[...days.entries()].map(([day, list]) => (
         <div key={day} className="flex flex-col gap-1.5">
           <p className="text-sm font-medium first-letter:uppercase">{day}</p>
@@ -40,7 +40,7 @@ export function SlotChips({ slots, disabled, onPick }: { slots: Slot[]; disabled
           </div>
         </div>
       ))}
-      {zone ? <p className="text-xs text-muted-foreground">Horarios en hora del {zone === "EST" || zone === "EDT" ? "Este de EE. UU." : zone} ({zone}).</p> : null}
+      {zone ? <p className="text-xs text-muted-foreground">Times shown in {zone === "EST" || zone === "EDT" ? "US Eastern time" : zone} ({zone}).</p> : null}
     </div>
   )
 }

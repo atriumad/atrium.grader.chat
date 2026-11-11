@@ -11,7 +11,9 @@ export type Subject = {
 export type ResearchRequest = {
   type: string
   subject: Subject
-  options?: { stream?: boolean }
+  // "basic" = listing, Instagram and competitors on Instagram (cheap, for anonymous visitors).
+  // "full" (default) adds the other networks and the website audit.
+  options?: { stream?: boolean; depth?: "basic" | "full" }
 }
 
 export type ErrorClass = "rate_limited" | "out_of_credits" | "timeout" | "not_found" | "not_implemented" | "unknown"
@@ -23,6 +25,7 @@ export type GapReason =
   | "no_data" // the tool ran and found nothing
   | "upstream_missing" // a previous required step produced nothing to work from
   | "budget" // the request budget was used up
+  | "depth" // not part of the requested depth (basic)
 
 export type Gap = { fact: string; reason: GapReason; errorClass?: ErrorClass }
 

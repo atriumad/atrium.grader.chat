@@ -52,14 +52,14 @@ export function BookingCard({
       <View style={[styles.card, { flexDirection: "row", gap: 12 }]} accessibilityRole="alert">
         <Text style={styles.check}>✓</Text>
         <View style={{ flex: 1, gap: 4 }}>
-          <Text style={styles.title}>Reunión agendada</Text>
+          <Text style={styles.title}>Meeting booked</Text>
           <Text style={styles.text}>{state.label}</Text>
           <Text style={styles.muted}>
-            {state.mock ? "Modo de prueba: no se creó ningún evento real ni se envió ninguna invitación." : `Te llegará una invitación a ${email}.`}
+            {state.mock ? "Test mode: no real event was created and no invitation was sent." : `An invitation will be sent to ${email}.`}
           </Text>
           {state.meetLink ? (
             <Pressable onPress={() => void Linking.openURL(state.meetLink!)} accessibilityRole="link">
-              <Text style={styles.link}>Enlace de la videollamada</Text>
+              <Text style={styles.link}>Video call link</Text>
             </Pressable>
           ) : null}
         </View>
@@ -71,7 +71,7 @@ export function BookingCard({
   return (
     <View style={styles.card}>
       <View style={{ gap: 2 }}>
-        <Text style={styles.title}>Revisa y confirma tu reunión</Text>
+        <Text style={styles.title}>Review and confirm your meeting</Text>
         <Text style={styles.muted}>{proposal.label}</Text>
       </View>
       <Field label="Nombre" value={name} onChangeText={setName} editable={!locked} autoComplete="name" textContentType="name" />
@@ -86,7 +86,7 @@ export function BookingCard({
         autoCapitalize="none"
       />
       <Field
-        label="Teléfono (opcional)"
+        label="Phone (optional)"
         value={phone}
         onChangeText={setPhone}
         editable={!locked}
@@ -96,14 +96,14 @@ export function BookingCard({
       />
       {proposal.notes ? <Text style={styles.muted}>Tema: {proposal.notes}</Text> : null}
       <Text style={[styles.muted, { fontSize: 12 }]}>
-        Al confirmar compartes tu nombre, correo y teléfono con el equipo de Atrium solo para agendar y atender esta reunión.
+        By confirming you share your name, email and phone with the Atrium team only to schedule and handle this meeting.
       </Text>
       {state.kind === "error" ? (
         <View style={{ gap: 8 }} accessibilityRole="alert">
           <Text style={[styles.text, { color: colors.destructive }]}>{state.message}</Text>
           {state.conflict ? (
             <Pressable onPress={onConflict} style={styles.secondary} accessibilityRole="button">
-              <Text style={styles.secondaryText}>Ver otros horarios</Text>
+              <Text style={styles.secondaryText}>See other times</Text>
             </Pressable>
           ) : null}
         </View>
@@ -115,7 +115,7 @@ export function BookingCard({
         style={({ pressed }) => [styles.primary, (locked || !valid) && { opacity: 0.45 }, pressed && { opacity: 0.85 }]}
       >
         {saving ? <ActivityIndicator size="small" color={colors.background} /> : null}
-        <Text style={styles.primaryText}>{saving ? "Agendando…" : "Confirmar reunión"}</Text>
+        <Text style={styles.primaryText}>{saving ? "Booking…" : "Confirm meeting"}</Text>
       </Pressable>
     </View>
   )

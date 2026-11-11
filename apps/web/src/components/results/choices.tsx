@@ -19,7 +19,7 @@ export function Choices({
   onPick: (place: Place) => void
 }) {
   return (
-    <section aria-label="Elige el local" className="report-rise flex max-w-[68ch] flex-col gap-4">
+    <section aria-label="Pick the location" className="report-rise flex max-w-[68ch] flex-col gap-4">
       <p className="font-display text-xl leading-snug text-balance">{message}</p>
       <ul className="flex flex-col gap-2">
         {options.map((o) => {
@@ -44,7 +44,7 @@ export function Choices({
                   <span className="inline-flex shrink-0 items-center gap-1 text-sm tnum">
                     <IconStarFilled className="size-3.5 text-brand" aria-hidden="true" />
                     {o.rating.toFixed(1)}
-                    {o.reviews ? <span className="text-muted-foreground">({o.reviews.toLocaleString("es")})</span> : null}
+                    {o.reviews ? <span className="text-muted-foreground">({o.reviews.toLocaleString("en-US")})</span> : null}
                   </span>
                 ) : null}
               </button>
@@ -53,7 +53,7 @@ export function Choices({
         })}
       </ul>
       <p className="text-sm text-muted-foreground text-pretty">
-        ¿No está en la lista? Escríbelo con la ciudad o usa su @ de Instagram.
+        Not on the list? Type it with the city, or use its Instagram @.
       </p>
     </section>
   )

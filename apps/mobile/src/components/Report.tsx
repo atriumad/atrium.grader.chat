@@ -100,14 +100,14 @@ const ScorePanel = memo(function ScorePanel({ you, total, avg, bench }: { you: R
               <Text style={styles.tierText}>{TIER_LABEL[you.tier]}</Text>
             </View>
             <Text style={styles.confidence}>
-              Confianza {CONFIDENCE_LABEL[you.confidence.level]}
+              Confidence: {CONFIDENCE_LABEL[you.confidence.level]}
               {you.confidence.level !== "high" && you.missing.length > 0
-                ? ` · provisional: faltan datos de ${you.missing.map((k) => PART_LABEL[k].toLowerCase()).join(", ")}`
+                ? ` · provisional: missing data for ${you.missing.map((k) => PART_LABEL[k].toLowerCase()).join(", ")}`
                 : ""}
             </Text>
           </View>
           <View style={styles.rankBox}>
-            <Text style={styles.muted}>Puesto</Text>
+            <Text style={styles.muted}>Rank</Text>
             <Text style={[styles.rankBig, tabular]}>
               {you.rank}
               <Text style={styles.rankOf}> / {total}</Text>
@@ -132,37 +132,37 @@ const ScorePanel = memo(function ScorePanel({ you, total, avg, bench }: { you: R
             <Meter value={b.you} mark={b.avg} color={b.you === null ? colors.tier.none : colors.tier[tierOf(b.you)]} delay={i * 80} />
             <Text style={[styles.partRaw, tabular]}>
               {b.rawLabel}: <Text style={{ color: colors.foreground, fontFamily: fonts.medium }}>{b.rawYou}</Text>
-              {b.rawAvg ? ` · competencia ${b.rawAvg}` : ""}
+              {b.rawAvg ? ` · competitors ${b.rawAvg}` : ""}
             </Text>
           </View>
         ))}
 
         <View style={styles.markNote}>
           <View style={styles.markTick} />
-          <Text style={styles.markText}>La marca indica el promedio de la competencia</Text>
+          <Text style={styles.markText}>The marker shows the competitor average</Text>
         </View>
 
         <Pressable onPress={() => setOpen((o) => !o)} accessibilityRole="button" style={styles.howBtn}>
-          <Text style={styles.howText}>{open ? "▾" : "▸"} Cómo se calcula el puntaje</Text>
+          <Text style={styles.howText}>{open ? "▾" : "▸"} How the score is calculated</Text>
         </Pressable>
         {open ? (
           <View style={styles.how}>
             <Text style={styles.howBody}>
-              Nota de 0 a 100 con cinco señales: engagement {w.engagement}%, reputación {w.reputation}%, actividad {w.activity}%, audiencia{" "}
-              {w.audience}% y presencia {w.presence}%. Las señales sociales (Instagram, Facebook, TikTok y YouTube, las que tenga el negocio) suman un {100 - w.reputation}% y Google un {w.reputation}%. Si falta una señal se calcula con las demás (hacen falta al
-              menos dos) y la confianza lo indica.
+              A score from 0 to 100 built from five signals: engagement {w.engagement}%, reputation {w.reputation}%, activity {w.activity}%, audience{" "}
+              {w.audience}% and presence {w.presence}%. Social signals (Instagram, Facebook, TikTok and YouTube, whichever the business has) make up {100 - w.reputation}% and Google {w.reputation}%. If a signal is missing, the score is calculated from the others (at least two are
+              needed) and the confidence level says so.
             </Text>
             <Text style={styles.howBody}>
-              Engagement se compara con lo esperable para el tamaño de la cuenta (4% bajo 5 mil seguidores, 3% hasta 20 mil, 2% hasta 100 mil y
-              1.2% por encima): igualarlo da unos 67 puntos y superarlo 1.5 veces da 100. Si hay vistas, cuentan un {cfg.engagement.viewsShare * 100}%.
-              Reputación usa un promedio bayesiano del rating (un 5.0 con pocas reseñas no vale como uno con miles) y el volumen de reseñas.
-              Actividad mezcla la frecuencia (hasta {cfg.activity.postsPerWeekFull} posts por semana, un 60%) con lo reciente que es el último post
-              (40%). Audiencia va de {cfg.audience.followersFloor.toLocaleString("es")} a {cfg.audience.followersFull.toLocaleString("es")}{" "}
-              seguidores en escala logarítmica.
+              Engagement is compared with what is expected for the account size (4% under 5K followers, 3% up to 20K, 2% up to 100K and
+              1.2% above): matching it gives about 67 points and beating it by 1.5x gives 100. When views are available they count for {cfg.engagement.viewsShare * 100}%.
+              Reputation uses a Bayesian average of the rating (a 5.0 with few reviews is not worth the same as one with thousands) and the review volume.
+              Activity blends posting frequency (up to {cfg.activity.postsPerWeekFull} posts per week, 60%) with how recent the last post is
+              (40%). Audience runs from {cfg.audience.followersFloor.toLocaleString("en-US")} to {cfg.audience.followersFull.toLocaleString("en-US")}{" "}
+              followers on a logarithmic scale.
             </Text>
             <Text style={styles.howBody}>
-              Verde desde {cfg.tiers.good}, naranja desde {cfg.tiers.medium}, rojo por debajo. Son criterios propios de Atrium, no un estándar de la
-              industria.
+              Green from {cfg.tiers.good}, orange from {cfg.tiers.medium}, red below that. These are Atrium&apos;s own criteria, not an industry
+              standard.
             </Text>
           </View>
         ) : null}
@@ -187,7 +187,7 @@ const RankRow = memo(function RankRow({ r, active, onPress }: { r: Row; active: 
           <Text style={styles.rankName}>{r.name}</Text>
           {r.isYou ? (
             <View style={styles.youPill}>
-              <Text style={styles.youText}>Tú</Text>
+              <Text style={styles.youText}>You</Text>
             </View>
           ) : null}
         </View>
@@ -233,13 +233,13 @@ export function Report({ data, children, settled = true }: { data: Dataset; chil
         <>
           {points.length > 0 ? (
             <Reveal>
-              <Card title="Dónde compites" footer="Halo = puntaje · tamaño = audiencia total en redes. Toca un pin para el detalle.">
+              <Card title="Where you compete" footer="Halo = score · size = total social audience. Tap a pin for details.">
                 <ResultsMap points={points} activeKey={active} onActive={setActive} />
               </Card>
             </Reveal>
           ) : null}
           <Reveal delay={120}>
-            <Card title="Ranking de tu zona" footer={`Competencia: ${data.competitorsSource} · Redes: últimos posts públicos.`}>
+            <Card title="Ranking in your area" footer={`Competitors: ${data.competitorsSource} · Social: latest public posts.`}>
               {rows.map((r) => (
                 <RankRow key={r.key} r={r} active={active === r.key} onPress={() => setActive((a) => (a === r.key ? null : r.key))} />
               ))}

@@ -1,36 +1,36 @@
 import { Card, PageHeader } from "@/components/admin/ui"
 
 const ENV = [
-  ["NEXT_PUBLIC_SUPABASE_URL", "URL del proyecto (Project Settings → API)"],
-  ["NEXT_PUBLIC_SUPABASE_ANON_KEY", "Clave anon / publishable (solo para el login)"],
-  ["SUPABASE_SERVICE_ROLE_KEY", "Clave service_role. Secreta: solo en el servidor, nunca en el navegador"],
-  ["ADMIN_EMAILS", "Correos que pueden entrar al panel, separados por comas"],
+  ["NEXT_PUBLIC_SUPABASE_URL", "Project URL (Project Settings → API)"],
+  ["NEXT_PUBLIC_SUPABASE_ANON_KEY", "Anon / publishable key (login only)"],
+  ["SUPABASE_SERVICE_ROLE_KEY", "service_role key. Secret: server only, never in the browser"],
+  ["ADMIN_EMAILS", "Emails allowed into the panel, comma-separated"],
 ] as const
 
 export function SetupGuide({ missing }: { missing: string[] }) {
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-16">
-      <PageHeader title="Falta configurar el panel">Conecta un proyecto de Supabase para guardar las reglas, el contenido y las métricas.</PageHeader>
-      <Card title="1. Variables de entorno" hint="En apps/web/.env.local para desarrollo y en Vercel para producción.">
+      <PageHeader title="The panel needs setup">Connect a Supabase project to store the rules, the content and the metrics.</PageHeader>
+      <Card title="1. Environment variables" hint="In apps/web/.env.local for development and in Vercel for production.">
         <ul className="flex flex-col gap-2 text-sm">
           {ENV.map(([k, d]) => (
             <li key={k} className="flex flex-col gap-0.5">
               <code className={`w-fit rounded bg-muted px-1.5 py-0.5 text-xs ${missing.includes(k) ? "text-destructive" : ""}`}>
                 {k}
-                {missing.includes(k) ? " · falta" : ""}
+                {missing.includes(k) ? " · missing" : ""}
               </code>
               <span className="text-muted-foreground">{d}</span>
             </li>
           ))}
         </ul>
       </Card>
-      <Card title="2. Base de datos" hint="Ejecuta supabase/migrations/0001_admin.sql en el SQL Editor de Supabase (o con supabase db push).">
-        <p className="text-sm text-muted-foreground">Crea las tablas de configuración, conocimiento, análisis y eventos, y la función de búsqueda.</p>
+      <Card title="2. Database" hint="Run supabase/migrations/0001_admin.sql in the Supabase SQL Editor (or with supabase db push).">
+        <p className="text-sm text-muted-foreground">Creates the configuration, knowledge, analysis and event tables, and the search function.</p>
       </Card>
-      <Card title="3. Login" hint="Authentication → URL Configuration en Supabase.">
+      <Card title="3. Login" hint="Authentication → URL Configuration in Supabase.">
         <p className="text-sm text-muted-foreground text-pretty">
-          Añade tu dominio como Site URL y <code className="rounded bg-muted px-1 text-xs">/auth/callback</code> en Redirect URLs (por ejemplo{" "}
-          <code className="rounded bg-muted px-1 text-xs">http://localhost:3000/auth/callback</code> en desarrollo). El acceso es con un enlace al correo.
+          Add your domain as the Site URL and <code className="rounded bg-muted px-1 text-xs">/auth/callback</code> in Redirect URLs (for example{" "}
+          <code className="rounded bg-muted px-1 text-xs">http://localhost:3000/auth/callback</code> in development). Sign-in is done with a link sent by email.
         </p>
       </Card>
     </main>

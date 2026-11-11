@@ -41,23 +41,23 @@ export async function liveSocial(d: Dataset, input: Record<string, unknown>) {
     network === "instagram"
       ? await (async () => {
           const h = (given || entity.instagram?.handle || "").replace(/^@/, "")
-          if (!HANDLE.test(h)) throw new Error("No hay usuario de Instagram para ese negocio.")
+          if (!HANDLE.test(h)) throw new Error("There is no Instagram username for that business.")
           return getInstagramStats(h)
         })()
       : await (async () => {
           const known = entity.networks?.find((n) => n.network === network)?.handle
           const ref = given || known || ""
-          if (!ref) throw new Error(`No se encontró una cuenta de ${network} para ese negocio.`)
+          if (!ref) throw new Error(`No ${network} account was found for that business.`)
           if (network === "tiktok") {
-            if (!HANDLE.test(ref)) throw new Error("Usuario de TikTok no válido.")
+            if (!HANDLE.test(ref)) throw new Error("Invalid TikTok username.")
             return getTikTokStats(ref.replace(/^@/, ""))
           }
           if (network === "facebook") {
-            if (!/^https:\/\/(www\.)?facebook\.com\//i.test(ref)) throw new Error("Pasa la URL de Facebook completa.")
+            if (!/^https:\/\/(www\.)?facebook\.com\//i.test(ref)) throw new Error("Provide the full Facebook URL.")
             return getFacebookStats(ref)
           }
           if (network === "youtube") {
-            if (!/^https:\/\/(www\.)?youtube\.com\//i.test(ref)) throw new Error("Pasa la URL del canal de YouTube.")
+            if (!/^https:\/\/(www\.)?youtube\.com\//i.test(ref)) throw new Error("Provide the YouTube channel URL.")
             return getYouTubeStats(ref)
           }
           throw new Error("Red no soportada.")
@@ -65,12 +65,12 @@ export async function liveSocial(d: Dataset, input: Record<string, unknown>) {
   // What the diagnostic had, so the model can compare and flag differences.
   const before =
     network === "instagram"
-      ? entity.instagram && { seguidores: entity.instagram.followers, engagementPct: entity.instagram.engagementRatePct }
+      ? entity.instagram && { followers: entity.instagram.followers, engagementPct: entity.instagram.engagementRatePct }
       : entity.networks?.find((n) => n.network === network) &&
-        (({ followers, engagementRatePct }) => ({ seguidores: followers, engagementPct: engagementRatePct }))(
+        (({ followers, engagementRatePct }) => ({ followers: followers, engagementPct: engagementRatePct }))(
           entity.networks!.find((n) => n.network === network)!
         )
-  return { negocio: entity.name, red: network, ahora: stats, enElDiagnostico: before ?? null }
+  return { business: entity.name, network, now: stats, inTheDiagnosis: before ?? null }
 }
 
 // ---- 2. Google reputation, live ----------------------------------------------
@@ -78,14 +78,14 @@ export async function liveSocial(d: Dataset, input: Record<string, unknown>) {
 export async function liveGoogle(d: Dataset, input: Record<string, unknown>) {
   const entity = findEntity(d, input.business)
   const p = await findBusiness(`${entity.name} ${entity.place?.address ?? ""}`.trim())
-  if (!p) return { negocio: entity.name, resultado: "No se encontró en Google Maps." }
+  if (!p) return { business: entity.name, result: "Not found on Google Maps." }
   return {
-    negocio: p.name,
-    direccion: p.address,
+    business: p.name,
+    address: p.address,
     rating: p.rating,
-    resenas: p.reviews,
-    sitioWeb: p.website,
-    enElDiagnostico: entity.place ? { rating: entity.place.rating, resenas: entity.place.reviews } : null,
+    reviews: p.reviews,
+    website: p.website,
+    inTheDiagnosis: entity.place ? { rating: entity.place.rating, reviews: entity.place.reviews } : null,
   }
 }
 
@@ -94,7 +94,7 @@ export async function liveGoogle(d: Dataset, input: Record<string, unknown>) {
 export async function seoAudit(d: Dataset, input: Record<string, unknown>) {
   const entity = findEntity(d, input.business)
   const site = entity.place?.website
-  if (!site) return { negocio: entity.name, resultado: "El negocio no tiene sitio web en Google Maps." }
+  if (!site) return { business: entity.name, result: "The business has no website on Google Maps." }
   // Only sites that came from the analysis: the model cannot point this at arbitrary URLs.
   const allowedHosts = entities(d).map((e) => (e.place?.website ? hostOf(e.place.website) : null)).filter((h): h is string => !!h)
   return auditWebsite(site, { name: entity.name, city: (entity.place?.address ?? "").split(",")[1]?.trim(), allowedHosts })
@@ -104,28 +104,28 @@ export async function seoAudit(d: Dataset, input: Record<string, unknown>) {
 
 export async function searchRanking(d: Dataset, input: Record<string, unknown>) {
   const query = String(input.query ?? "").trim().slice(0, 120)
-  if (query.length < 3) throw new Error("Consulta muy corta.")
+  if (query.length < 3) throw new Error("Query too short.")
   const entity = findEntity(d, input.business)
-  const data = await sc("/v1/google/search", { query, country: "us", language: "es" })
+  const data = await sc("/v1/google/search", { query, country: "us", language: "en" })
   const results: Array<{ title: string; url: string; description?: string }> = Array.isArray(data?.results) ? data.results : []
   const mine = new Set([entity.place?.website, ...(entity.networks ?? []).map(() => null)].map((u) => (u ? hostOf(u) : null)).filter(Boolean))
   const compHosts = new Map(d.competitors.map((c) => [c.place?.website ? hostOf(c.place.website) : null, c.name] as const))
   const rows = results.map((r, i) => {
     const h = hostOf(r.url)
     return {
-      posicion: i + 1,
-      titulo: r.title,
-      dominio: h,
-      esElNegocio: !!h && mine.has(h),
-      competidor: (h && compHosts.get(h)) || undefined,
+      position: i + 1,
+      title: r.title,
+      domain: h,
+      isTheBusiness: !!h && mine.has(h),
+      competitor: (h && compHosts.get(h)) || undefined,
     }
   })
-  const pos = rows.find((r) => r.esElNegocio)?.posicion ?? null
+  const pos = rows.find((r) => r.isTheBusiness)?.position ?? null
   return {
-    consulta: query,
-    negocio: entity.name,
-    posicionDelSitioDelNegocio: pos,
-    nota: pos ? undefined : "No aparece en los primeros 10 resultados orgánicos de esta consulta (sin Google Maps ni resultados locales).",
+    query: query,
+    business: entity.name,
+    businessSitePosition: pos,
+    note: pos ? undefined : "Does not appear in the first 10 organic results for this query (excluding Google Maps and local results).",
     top10: rows,
   }
 }

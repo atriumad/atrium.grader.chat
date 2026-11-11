@@ -1,13 +1,16 @@
+import { Suspense } from "react"
 import { connection } from "next/server"
 
-import { PageHeader } from "@/components/admin/ui"
+import { PageHeader, PanelSkeleton } from "@/components/admin/ui"
 import { ScoringEditor } from "@/components/admin/scoring-editor"
 import { configHistory, getScoring } from "@/lib/admin/config"
 import { DEFAULT_SCORE_CONFIG, serializeScoreConfig } from "@/lib/metrics"
 import { db } from "@/lib/supabase/server"
+import { assertAdmin } from "@/lib/supabase/auth"
 
-export default async function ScoringPage() {
+async function ScoringContent() {
   await connection() // read the database per request, never at build time
+  await assertAdmin()
   const [cur, history, samples] = await Promise.all([
     getScoring(true),
     configHistory("scoring"),
@@ -15,9 +18,6 @@ export default async function ScoringPage() {
   ])
   return (
     <>
-      <PageHeader title="Reglas del puntaje">
-        Define cómo se calcula el Puntaje Atrium. Al publicar, los análisis nuevos de la web y de la app usan estas reglas; los ya hechos conservan las suyas. Antes de publicar puedes ver cómo cambiarían análisis reales.
-      </PageHeader>
       <ScoringEditor
         published={serializeScoreConfig(cur.config) as never}
         defaults={serializeScoreConfig(DEFAULT_SCORE_CONFIG) as never}
@@ -27,6 +27,19 @@ export default async function ScoringPage() {
         history={history.map((h) => ({ id: h.id, value: h.value as never, note: h.note, at: h.created_at, by: h.created_by }))}
         samples={(samples.data ?? []).map((s) => ({ id: s.id as string, name: s.business_name as string, at: s.created_at as string, dataset: s.dataset as never }))}
       />
+    </>
+  )
+}
+
+export default function ScoringPage() {
+  return (
+    <>
+      <PageHeader title="Score rules">
+        Define how the Atrium Score is calculated. When you publish, new analyses on the web and in the app use these rules; existing ones keep theirs. Before publishing you can preview how real analyses would change.
+      </PageHeader>
+      <Suspense fallback={<PanelSkeleton />}>
+        <ScoringContent />
+      </Suspense>
     </>
   )
 }

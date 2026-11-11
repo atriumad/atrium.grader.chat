@@ -37,8 +37,8 @@ function parseRequest(body: unknown): ResearchRequest {
   if (typeof b.type !== "string") throw new PolicyError(400, "type is required")
   const subject = { placeId: text(s.placeId), name: text(s.name), city: text(s.city), instagram: text(s.instagram), clientId: text(s.clientId) }
   if (!subject.placeId && !subject.name && !subject.instagram && !subject.clientId) throw new PolicyError(400, "subject needs placeId, name, instagram or clientId")
-  const stream = (b.options as Record<string, unknown> | undefined)?.stream
-  return { type: b.type, subject, options: { stream: stream !== false } }
+  const options = (b.options ?? {}) as Record<string, unknown>
+  return { type: b.type, subject, options: { stream: options.stream !== false, depth: options.depth === "basic" ? "basic" : "full" } }
 }
 
 export function createAgentServer(deps: ServerDeps): Server {

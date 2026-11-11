@@ -47,7 +47,7 @@ export function groupByAccount(business: Entity, competitors: Entity[]): Grouped
   }
 
   return {
-    competitors: kept.map((c, i) => (locations[i] > 1 ? { ...c, name: `${c.name} · ${locations[i]} locales` } : c)),
+    competitors: kept.map((c, i) => (locations[i] > 1 ? { ...c, name: `${c.name} · ${locations[i]} locations` } : c)),
     sameBrandAsBusiness,
     merged,
   }
@@ -55,7 +55,7 @@ export function groupByAccount(business: Entity, competitors: Entity[]): Grouped
 
 export function groupNote(g: Grouped): string {
   const parts: string[] = []
-  if (g.merged) parts.push(`locales agrupados por compartir cuentas: ${g.merged}`)
-  if (g.sameBrandAsBusiness) parts.push(`locales de la misma marca excluidos de la competencia: ${g.sameBrandAsBusiness}`)
+  if (g.merged) parts.push(`locations merged for sharing accounts: ${g.merged}`)
+  if (g.sameBrandAsBusiness) parts.push(`locations of the same brand excluded from competitors: ${g.sameBrandAsBusiness}`)
   return parts.length ? ` (${parts.join("; ")})` : ""
 }

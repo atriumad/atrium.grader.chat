@@ -15,14 +15,14 @@ const NETWORK_LABEL: Record<ChannelNetwork | "google", string> = {
 
 type Stat = { label: string; value: string | null }
 
-// A missing value reads "sin dato", never a silent zero: the owner sees what could not be read.
+// A missing value reads "no data", never a silent zero: the owner sees what could not be read.
 function Stats({ stats }: { stats: Stat[] }) {
   return (
-    <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border bg-border sm:grid-cols-4">
+    <dl className="grid gap-px overflow-hidden rounded-xl border bg-border [grid-template-columns:repeat(auto-fit,minmax(min(9rem,100%),1fr))]">
       {stats.map((s) => (
         <div key={s.label} className="flex flex-col gap-1 bg-card px-4 py-3">
           <dt className="text-xs text-muted-foreground">{s.label}</dt>
-          <dd className={`font-display text-2xl leading-none tnum ${s.value === null ? "text-muted-foreground" : ""}`}>{s.value ?? "sin dato"}</dd>
+          <dd className={`font-display text-2xl leading-none tnum ${s.value === null ? "text-muted-foreground" : ""}`}>{s.value ?? "no data"}</dd>
         </div>
       ))}
     </dl>
@@ -38,8 +38,8 @@ export function ChannelTabs({ data }: { data: Dataset }) {
   const notes = [you.instagramNote !== "ok" ? you.instagramNote : "", you.networksNote ?? ""].filter(Boolean)
 
   return (
-    <section aria-label="Detalle por canal" className="overflow-hidden rounded-2xl border bg-card">
-      <div role="tablist" aria-label="Canales" className="flex gap-1 overflow-x-auto border-b px-3 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+    <section aria-label="Channel detail" className="overflow-hidden rounded-2xl border bg-card">
+      <div role="tablist" aria-label="Channels" className="flex gap-1 overflow-x-auto border-b px-3 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {tabs.map((t) => (
           <button
             key={t}
@@ -63,22 +63,22 @@ export function ChannelTabs({ data }: { data: Dataset }) {
               <Stats
                 stats={[
                   { label: "Rating", value: you.place.rating != null ? fmt.rating(you.place.rating) : null },
-                  { label: "Reseñas", value: you.place.reviews != null ? String(you.place.reviews) : null },
+                  { label: "Reviews", value: you.place.reviews != null ? String(you.place.reviews) : null },
                 ]}
               />
             </>
           ) : (
-            <p className="text-sm text-muted-foreground">No se confirmó una ficha de Google para este negocio, así que la reputación no cuenta en el puntaje.</p>
+            <p className="text-sm text-muted-foreground">No Google listing was confirmed for this business, so reputation does not count toward the score.</p>
           )
         ) : current ? (
           <>
-            <p className="text-sm text-muted-foreground">@{current.handle} · {current.postsSampled} posts públicos analizados</p>
+            <p className="text-sm text-muted-foreground">@{current.handle} · {current.postsSampled} public posts analyzed</p>
             <Stats
               stats={[
-                { label: "Seguidores", value: current.followers != null ? fmt.followers(current.followers) : null },
-                { label: "Interacción", value: current.engagementRatePct != null ? fmt.engagement(current.engagementRatePct) : null },
-                { label: "Posts por semana", value: current.postsPerWeek != null ? fmt.postsPerWeek(current.postsPerWeek) : null },
-                { label: "Último post", value: current.lastPostDaysAgo != null ? `hace ${current.lastPostDaysAgo} d` : null },
+                { label: "Followers", value: current.followers != null ? fmt.followers(current.followers) : null },
+                { label: "Engagement", value: current.engagementRatePct != null ? fmt.engagement(current.engagementRatePct) : null },
+                { label: "Posts per week", value: current.postsPerWeek != null ? fmt.postsPerWeek(current.postsPerWeek) : null },
+                { label: "Last post", value: current.lastPostDaysAgo != null ? `${current.lastPostDaysAgo}d ago` : null },
               ]}
             />
           </>

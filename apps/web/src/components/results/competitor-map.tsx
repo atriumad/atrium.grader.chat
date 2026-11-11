@@ -41,16 +41,16 @@ function pinSize(p: MapPoint): number {
 function popupHtml(p: MapPoint, distanceM: number | null): string {
   const color = TIER_VAR[p.tier]
   const lines = [
-    p.rating ? `★ ${fmt.rating(p.rating)}${p.reviews ? ` (${p.reviews.toLocaleString("es")} reseñas)` : ""}` : null,
-    p.followers ? `${fmt.followers(p.followers)} seguidores` : null,
-    p.engagement !== null ? `${fmt.engagement(p.engagement)} de engagement` : null,
-    distanceM !== null ? `A ${distanceM < 1000 ? `${Math.round(distanceM)} m` : `${(distanceM / 1000).toFixed(1)} km`} de tu negocio` : null,
+    p.rating ? `★ ${fmt.rating(p.rating)}${p.reviews ? ` (${p.reviews.toLocaleString("en-US")} reviews)` : ""}` : null,
+    p.followers ? `${fmt.followers(p.followers)} followers` : null,
+    p.engagement !== null ? `${fmt.engagement(p.engagement)} engagement` : null,
+    distanceM !== null ? `${distanceM < 160 ? `${Math.round(distanceM * 3.281)} ft` : `${(distanceM / 1609.34).toFixed(1)} mi`} from your business` : null,
   ].filter(Boolean)
   return `<div style="min-width:170px">
-    <strong style="font-size:14px">${esc(p.name)}</strong>${p.isYou ? ' <span style="opacity:.6">(tú)</span>' : ""}
+    <strong style="font-size:14px">${esc(p.name)}</strong>${p.isYou ? ' <span style="opacity:.6">(you)</span>' : ""}
     <div style="display:flex;align-items:center;gap:6px;margin:6px 0 4px">
       <span style="width:10px;height:10px;border-radius:9999px;background:${color}"></span>
-      <span style="font-weight:600">${p.score === null ? "Sin puntaje" : `Puntaje ${p.score}`}</span>
+      <span style="font-weight:600">${p.score === null ? "No score" : `Score ${p.score}`}</span>
       <span style="opacity:.65">· ${TIER_LABEL[p.tier]}</span>
     </div>
     ${lines.map((l) => `<div style="opacity:.8">${esc(l as string)}</div>`).join("")}
@@ -117,7 +117,7 @@ export function CompetitorMap({
         const s = pinSize(p)
         const html = `<span class="pin-wrap" style="--s:${s}px;--tier:${TIER_VAR[p.tier]};--d:${i * 90}ms">
           <span class="pin-halo"></span><span class="pin-ring"></span>
-          <span class="map-pin${p.isYou ? " map-pin--you" : ""}">${p.isYou ? "Tú" : p.rank}</span>
+          <span class="map-pin${p.isYou ? " map-pin--you" : ""}">${p.isYou ? "You" : p.rank}</span>
         </span>`
         const marker = L.marker([p.lat, p.lng], {
           icon: L.divIcon({ className: "", html, iconSize: [s, s], iconAnchor: [s / 2, s / 2], popupAnchor: [0, -s / 2 - 4] }),
@@ -166,21 +166,21 @@ export function CompetitorMap({
   }, [points, radiusMeters, applyActive])
 
   return (
-    <div className="relative isolate z-0">
+    <div className="relative isolate z-0 h-full">
       <div
         ref={ref}
         role="img"
-        aria-label={`Mapa con ${points.length} negocios: el tuyo y ${points.length - 1} competidores cercanos, con su puntaje`}
-        className="h-80 w-full bg-muted sm:h-[26rem]"
+        aria-label={`Map with ${points.length} businesses: yours and ${points.length - 1} nearby competitors, with their score`}
+        className="h-64 w-full bg-muted lg:h-full lg:min-h-64"
       />
       <ul
-        aria-label="Leyenda del puntaje"
+        aria-label="Score legend"
         className="absolute bottom-6 left-3 z-[500] flex items-center gap-2.5 rounded-full border bg-card/95 px-2.5 py-1 text-[0.6875rem] shadow-sm"
       >
         {(["good", "medium", "low", "none"] as Tier[]).map((t) => (
           <li key={t} className="flex items-center gap-1">
             <span className="size-2 rounded-full" style={{ background: TIER_VAR[t] }} aria-hidden="true" />
-            <span>{t === "none" ? "Sin datos" : TIER_LABEL[t]}</span>
+            <span>{t === "none" ? "No data" : TIER_LABEL[t]}</span>
           </li>
         ))}
       </ul>

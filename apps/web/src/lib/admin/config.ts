@@ -68,7 +68,7 @@ export async function saveConfig(key: ConfigKey, input: unknown, by: string, not
 export async function resetConfig(key: ConfigKey, by: string) {
   const { error } = await db().from("app_config").delete().eq("key", key)
   if (error) throw new Error(error.message)
-  await db().from("config_history").insert({ key, value: key === "scoring" ? serializeScoreConfig(DEFAULT_SCORE_CONFIG) : DEFAULT_AGENT_CONFIG, note: "Restablecido a los valores por defecto", created_by: by })
+  await db().from("config_history").insert({ key, value: key === "scoring" ? serializeScoreConfig(DEFAULT_SCORE_CONFIG) : DEFAULT_AGENT_CONFIG, note: "Reset to the default values", created_by: by })
   cache.delete(key)
 }
 

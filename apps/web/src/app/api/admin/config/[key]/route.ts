@@ -29,12 +29,12 @@ export async function PUT(req: Request, ctx: Ctx) {
   const { key } = await ctx.params
   if (!isKey(key) || !supabaseConfigured()) return Response.json({ error: "No encontrado." }, { status: 404 })
   const body = (await req.json().catch(() => null)) as { value?: unknown; note?: unknown } | null
-  if (!body || body.value === undefined) return Response.json({ error: "Solicitud no válida." }, { status: 400 })
+  if (!body || body.value === undefined) return Response.json({ error: "Invalid request." }, { status: 400 })
   try {
     const value = await saveConfig(key, body.value, a.admin.email, typeof body.note === "string" ? body.note : undefined)
     return Response.json({ ok: true, value })
   } catch (e) {
-    return Response.json({ error: e instanceof Error ? e.message : "No se pudo guardar." }, { status: 500 })
+    return Response.json({ error: e instanceof Error ? e.message : "Could not save." }, { status: 500 })
   }
 }
 
@@ -47,6 +47,6 @@ export async function DELETE(_req: Request, ctx: Ctx) {
     await resetConfig(key, a.admin.email)
     return Response.json({ ok: true })
   } catch (e) {
-    return Response.json({ error: e instanceof Error ? e.message : "No se pudo restablecer." }, { status: 500 })
+    return Response.json({ error: e instanceof Error ? e.message : "Could not reset." }, { status: 500 })
   }
 }

@@ -6,11 +6,13 @@ import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 
 const ITEMS = [
-  { href: "/admin", label: "Resumen" },
-  { href: "/admin/scoring", label: "Puntaje" },
-  { href: "/admin/agentes", label: "Agentes" },
-  { href: "/admin/conocimiento", label: "Conocimiento" },
-  { href: "/admin/busquedas", label: "Búsquedas" },
+  { href: "/admin", label: "Overview" },
+  { href: "/admin/analisis", label: "Analyses" },
+  { href: "/admin/scoring", label: "Score" },
+  { href: "/admin/agentes", label: "Agents" },
+  { href: "/admin/conocimiento", label: "Knowledge" },
+  { href: "/admin/costos", label: "Costs" },
+  { href: "/admin/busquedas", label: "Lookups" },
 ]
 
 export function AdminNav({ email }: { email: string }) {
@@ -49,7 +51,7 @@ export function AdminNav({ email }: { email: string }) {
             router.refresh()
           }}
         >
-          Salir
+          Sign out
         </Button>
       </div>
     </nav>

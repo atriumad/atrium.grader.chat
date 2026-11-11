@@ -187,22 +187,22 @@ export type PartKey = keyof ScoreConfig["weights"]
 export type ConfidenceLevel = "high" | "medium" | "low"
 
 export const TIER_LABEL: Record<Tier, string> = {
-  good: "Bueno",
-  medium: "Medio",
-  low: "Bajo",
-  none: "Sin datos",
+  good: "Good",
+  medium: "Fair",
+  low: "Low",
+  none: "No data",
 }
 export const CONFIDENCE_LABEL: Record<ConfidenceLevel, string> = {
-  high: "alta",
-  medium: "media",
-  low: "baja",
+  high: "high",
+  medium: "medium",
+  low: "low",
 }
 export const PART_LABEL: Record<PartKey, string> = {
   engagement: "Engagement",
-  reputation: "Reputación",
-  activity: "Actividad",
-  audience: "Audiencia",
-  presence: "Presencia",
+  reputation: "Reputation",
+  activity: "Activity",
+  audience: "Audience",
+  presence: "Presence",
 }
 export const TIER_VAR: Record<Tier, string> = {
   good: "var(--tier-good)",
@@ -476,7 +476,7 @@ export function toRows(d: Dataset): Row[] {
 
 // ---------------------------------------------------------------------------
 
-const compact = new Intl.NumberFormat("es", { notation: "compact", maximumFractionDigits: 1 })
+const compact = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 })
 
 export const fmt = {
   followers: (n: number) => compact.format(n),
@@ -507,25 +507,25 @@ const PARTS: Array<{
 }> = [
   {
     key: "engagement",
-    rawLabel: "Interacción por seguidor",
+    rawLabel: "Engagement per follower",
     raw: (r) => r.engagement,
     format: fmt.engagement,
     you: (r) =>
-      r.engagement === null ? null : `${fmt.engagement(r.engagement)} (esperable ${expectedEngagement(r.followers)}% para tu tamaño)`,
+      r.engagement === null ? null : `${fmt.engagement(r.engagement)} (expected ${expectedEngagement(r.followers)}% for your size)`,
   },
-  { key: "reputation", rawLabel: "Rating en Google", raw: (r) => r.rating, format: fmt.rating },
+  { key: "reputation", rawLabel: "Google rating", raw: (r) => r.rating, format: fmt.rating },
   {
     key: "activity",
-    rawLabel: "Posts por semana (todas las redes)",
+    rawLabel: "Posts per week (all networks)",
     raw: (r) => r.postsPerWeek,
     format: fmt.postsPerWeek,
     you: (r) =>
       r.postsPerWeek === null
         ? null
-        : `${fmt.postsPerWeek(r.postsPerWeek)}${r.lastPostDaysAgo !== null ? ` · último post hace ${r.lastPostDaysAgo} d` : ""}`,
+        : `${fmt.postsPerWeek(r.postsPerWeek)}${r.lastPostDaysAgo !== null ? ` · last post ${r.lastPostDaysAgo}d ago` : ""}`,
   },
-  { key: "audience", rawLabel: "Seguidores en redes", raw: (r) => r.followers, format: fmt.followers },
-  { key: "presence", rawLabel: "Redes activas (post en 30 días)", raw: (r) => r.activeNetworks, format: (n) => String(n) },
+  { key: "audience", rawLabel: "Social followers", raw: (r) => r.followers, format: fmt.followers },
+  { key: "presence", rawLabel: "Active networks (posted in 30 days)", raw: (r) => r.activeNetworks, format: (n) => String(Math.round(n * 10) / 10) },
 ]
 
 function mean(vals: Array<number | null>): number | null {

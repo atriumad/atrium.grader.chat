@@ -41,7 +41,7 @@ export function BookingCard({
       }
       setState({ kind: "done", label: json.label, mock: !!json.mock, meetLink: json.meetLink ?? null })
     } catch {
-      setState({ kind: "error", message: "No pude conectar con el servidor. Inténtalo de nuevo.", conflict: false })
+      setState({ kind: "error", message: "I could not reach the server. Please try again.", conflict: false })
     }
   }
 
@@ -50,12 +50,12 @@ export function BookingCard({
       <div className="report-rise flex max-w-[68ch] items-start gap-3 rounded-2xl border bg-card p-4" role="status">
         <IconCircleCheckFilled className="mt-0.5 size-5 shrink-0 text-positive" aria-hidden="true" />
         <div className="flex flex-col gap-1">
-          <p className="font-medium">Reunión agendada</p>
+          <p className="font-medium">Meeting booked</p>
           <p className="text-sm">{state.label}</p>
           {state.mock ? (
-            <p className="text-sm text-muted-foreground">Modo de prueba: no se creó ningún evento real ni se envió ninguna invitación.</p>
+            <p className="text-sm text-muted-foreground">Test mode: no real event was created and no invitation was sent.</p>
           ) : (
-            <p className="text-sm text-muted-foreground">Te llegará una invitación a {email}.</p>
+            <p className="text-sm text-muted-foreground">An invitation will be sent to {email}.</p>
           )}
           {state.meetLink ? (
             <a href={state.meetLink} className="text-sm underline underline-offset-4" target="_blank" rel="noreferrer">
@@ -78,26 +78,26 @@ export function BookingCard({
       }}
     >
       <div className="flex flex-col gap-0.5">
-        <p className="font-display text-xl leading-snug">Revisa y confirma tu reunión</p>
+        <p className="font-display text-xl leading-snug">Review and confirm your meeting</p>
         <p className="text-sm text-muted-foreground tnum">{proposal.label}</p>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="flex flex-col gap-1 text-sm">
-          Nombre
+          Name
           <input className={field} value={name} onChange={(e) => setName(e.target.value)} disabled={!active || busy} autoComplete="name" required />
         </label>
         <label className="flex flex-col gap-1 text-sm">
-          Correo
+          Email
           <input className={field} type="email" value={email} onChange={(e) => setEmail(e.target.value)} disabled={!active || busy} autoComplete="email" required />
         </label>
         <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-          Teléfono <span className="text-muted-foreground">(opcional)</span>
+          Phone <span className="text-muted-foreground">(optional)</span>
           <input className={field} type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} disabled={!active || busy} autoComplete="tel" />
         </label>
       </div>
-      {proposal.notes ? <p className="text-sm text-muted-foreground text-pretty">Tema: {proposal.notes}</p> : null}
+      {proposal.notes ? <p className="text-sm text-muted-foreground text-pretty">Topic: {proposal.notes}</p> : null}
       <p className="text-xs text-muted-foreground text-pretty">
-        Al confirmar compartes tu nombre, correo y teléfono con el equipo de Atrium solo para agendar y atender esta reunión.
+        By confirming you share your name, email and phone with the Atrium team only to schedule and handle this meeting.
       </p>
       {state.kind === "error" ? (
         <div role="alert" className="flex flex-col gap-2 text-sm text-destructive">
@@ -115,7 +115,7 @@ export function BookingCard({
         className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-foreground px-6 text-sm font-medium text-primary-foreground transition-opacity enabled:hover:opacity-90 disabled:opacity-50 sm:w-fit"
       >
         {busy ? <IconLoader2 className="size-4 motion-safe:animate-spin" aria-hidden="true" /> : null}
-        {busy ? "Agendando…" : "Confirmar reunión"}
+        {busy ? "Booking…" : "Confirm meeting"}
       </button>
     </form>
   )

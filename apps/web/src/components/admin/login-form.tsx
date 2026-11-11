@@ -21,7 +21,7 @@ export function LoginForm() {
     const json = res ? await res.json().catch(() => ({})) : {}
     if (res?.ok) setState("sent")
     else {
-      setMsg(json.error ?? "No se pudo enviar. Intenta de nuevo.")
+      setMsg(json.error ?? "Could not send. Try again.")
       setState("error")
     }
   }
@@ -29,7 +29,7 @@ export function LoginForm() {
   if (state === "sent")
     return (
       <p role="status" className="rounded-2xl border bg-card p-4 text-sm text-pretty">
-        Si el correo está autorizado, recibirás un enlace en unos segundos. Revisa también la carpeta de spam.
+        If the email is authorized, you will receive a link in a few seconds. Check your spam folder too.
       </p>
     )
   return (
@@ -40,7 +40,7 @@ export function LoginForm() {
       </label>
       {state === "error" ? <p role="alert" className="text-sm text-destructive">{msg}</p> : null}
       <Button type="submit" disabled={state === "sending" || !email}>
-        {state === "sending" ? "Enviando…" : "Enviar enlace"}
+        {state === "sending" ? "Sending…" : "Send link"}
       </Button>
     </form>
   )

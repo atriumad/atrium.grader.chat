@@ -56,7 +56,7 @@ export function startLookupContext(query: string): LookupContext {
   return ctx
 }
 
-// What each external lookup returned, for the admin "Búsquedas" page. Fire-and-forget.
+// What each external lookup returned, for the admin "Lookups" page. Fire-and-forget.
 export function logLookup(l: LookupLog): void {
   if (!supabaseConfigured()) return
   const ctx = lookupStore.getStore()

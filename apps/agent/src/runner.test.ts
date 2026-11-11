@@ -106,7 +106,7 @@ test("rival locations sharing accounts fold into one brand and do not use up the
   })
   const r = await runResearch({ config, registry: createRegistry(tools) }, grader, req, () => {})
   const social = r.facts.competitorSocial as { name: string }[]
-  assert.deepEqual(social.map((s) => s.name), ["A1 · 2 locales", "B", "C"]) // Biz2 is the business itself, A2 folded into A1
+  assert.deepEqual(social.map((s) => s.name), ["A1 · 2 locations", "B", "C"]) // Biz2 is the business itself, A2 folded into A1
   assert.deepEqual(r.facts.competitorGrouping, { merged: 1, sameBrandAsBusiness: 1 })
 })
 
@@ -131,4 +131,33 @@ test("a provider that is out of credits stops the rival rounds instead of failin
   const r = await runResearch({ config, registry: createRegistry(tools) }, grader, req, () => {})
   assert.equal(socialCalls, 1 + 3) // the business plus one round of 3 rivals, no more
   assert.ok(r.gaps.some((g) => g.fact === "competitorSocial" && g.errorClass === "out_of_credits"))
+})
+
+test("competitors are read for Instagram only; the business gets every network", async () => {
+  const seen: { name?: unknown; instagramOnly?: unknown }[] = []
+  const tools = happyTools().map((t) => (t.name === "social_public" ? tool("social_public", async (i) => (seen.push({ name: i.name, instagramOnly: i.instagramOnly }), ok({ instagram: { handle: String(i.name) }, networks: [] }))) : t))
+  await runResearch({ config, registry: createRegistry(tools) }, grader, req, () => {})
+  assert.equal(seen.find((s) => s.name === "Biz")?.instagramOnly, false)
+  assert.ok(seen.filter((s) => s.name !== "Biz").length >= 3)
+  assert.ok(seen.filter((s) => s.name !== "Biz").every((s) => s.instagramOnly === true))
+})
+
+test("basic depth reads Instagram only for the business and skips the website audit", async () => {
+  const on = structuredClone(config)
+  on.tools.website_audit = { ...on.tools.website_audit, enabled: true, timeoutSeconds: 1, costCentsEstimate: 2 }
+  const seen: { name?: unknown; instagramOnly?: unknown }[] = []
+  let audits = 0
+  const tools = [
+    ...happyTools().filter((t) => t.name !== "social_public"),
+    tool("social_public", async (i) => (seen.push({ name: i.name, instagramOnly: i.instagramOnly }), ok({ instagram: { handle: String(i.name) }, networks: [] }))),
+    tool("website_audit", async () => (audits++, ok({ url: "x" }))),
+  ]
+  const basic = await runResearch({ config: on, registry: createRegistry(tools) }, on.callers[0], { ...req, options: { depth: "basic" } }, () => {})
+  assert.equal(audits, 0)
+  assert.ok(seen.every((s) => s.instagramOnly === true))
+  assert.ok(basic.gaps.some((g) => g.fact === "websiteAudit" && g.reason === "depth"))
+  seen.length = 0
+  await runResearch({ config: on, registry: createRegistry(tools) }, on.callers[0], req, () => {})
+  assert.equal(audits, 1)
+  assert.equal(seen.find((s) => s.name === "Biz")?.instagramOnly, false)
 })

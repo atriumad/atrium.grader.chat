@@ -1,17 +1,17 @@
+import { Suspense } from "react"
 import { connection } from "next/server"
 
 import { AgentEditor } from "@/components/admin/agent-editor"
-import { PageHeader } from "@/components/admin/ui"
+import { PageHeader, PanelSkeleton } from "@/components/admin/ui"
 import { configHistory, getAgent } from "@/lib/admin/config"
+import { assertAdmin } from "@/lib/supabase/auth"
 
-export default async function AgentsPage() {
+async function AgentsContent() {
   await connection() // read the database per request, never at build time
+  await assertAdmin()
   const [cur, history] = await Promise.all([getAgent(true), configHistory("agent")])
   return (
     <>
-      <PageHeader title="Comportamiento de los agentes">
-        Ajusta el tono, las instrucciones y las herramientas del análisis y del chat sin tocar código. Los cambios aplican a las conversaciones y análisis nuevos.
-      </PageHeader>
       <AgentEditor
         initial={cur.config}
         custom={cur.custom}
@@ -19,6 +19,19 @@ export default async function AgentsPage() {
         updatedBy={cur.updatedBy}
         history={history.map((h) => ({ id: h.id, value: h.value, note: h.note, at: h.created_at, by: h.created_by }))}
       />
+    </>
+  )
+}
+
+export default function AgentsPage() {
+  return (
+    <>
+      <PageHeader title="Agent behavior">
+        Adjust the tone, instructions and tools of the analysis and the chat without touching code. Changes apply to new conversations and analyses.
+      </PageHeader>
+      <Suspense fallback={<PanelSkeleton />}>
+        <AgentsContent />
+      </Suspense>
     </>
   )
 }

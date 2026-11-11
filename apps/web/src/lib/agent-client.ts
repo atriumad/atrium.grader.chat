@@ -68,13 +68,14 @@ export function toEntities(result: AgentResult): AgentResearch | null {
 // Runs one research request. Returns null on any problem so the caller can use its own flow.
 export async function researchViaAgent(
   subject: { placeId?: string; name?: string },
-  onStep: (s: AgentStep) => void
+  onStep: (s: AgentStep) => void,
+  depth: "basic" | "full" = "full"
 ): Promise<AgentResearch | null> {
   try {
     const res = await fetch(`${process.env.AGENT_URL!.replace(/\/$/, "")}/v1/research`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.AGENT_API_KEY}` },
-      body: JSON.stringify({ type: "business_profile", subject, options: { stream: true } }),
+      body: JSON.stringify({ type: "business_profile", subject, options: { stream: true, depth } }),
       signal: AbortSignal.timeout(100_000),
     })
     if (!res.ok || !res.body) return null

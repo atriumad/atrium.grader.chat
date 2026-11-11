@@ -19,7 +19,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
   const { id } = await ctx.params
   if (!UUID.test(id)) return Response.json({ error: "No encontrado." }, { status: 404 })
   const body = (await req.json().catch(() => null)) as Record<string, unknown> | null
-  if (!body) return Response.json({ error: "Solicitud no válida." }, { status: 400 })
+  if (!body) return Response.json({ error: "Invalid request." }, { status: 400 })
   try {
     await updateDoc(id, {
       title: typeof body.title === "string" ? body.title : undefined,
@@ -30,7 +30,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
     invalidatePinned()
     return Response.json({ ok: true })
   } catch (e) {
-    return Response.json({ error: e instanceof Error ? e.message : "No se pudo actualizar." }, { status: 500 })
+    return Response.json({ error: e instanceof Error ? e.message : "Could not update." }, { status: 500 })
   }
 }
 
@@ -44,6 +44,6 @@ export async function DELETE(_req: Request, ctx: Ctx) {
     invalidatePinned()
     return Response.json({ ok: true })
   } catch (e) {
-    return Response.json({ error: e instanceof Error ? e.message : "No se pudo eliminar." }, { status: 500 })
+    return Response.json({ error: e instanceof Error ? e.message : "Could not delete." }, { status: 500 })
   }
 }

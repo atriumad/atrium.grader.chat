@@ -63,7 +63,8 @@ tools:
     profile: public
     timeoutSeconds: 30
     costCentsEstimate: 4
-    networks: [instagram, facebook, tiktok, youtube]
+    networks: [instagram, facebook, tiktok]      # YouTube fuera: no aporta al diagnóstico y es lo más lento
+    competitorsInstagramOnly: true
     # Orden: enlaces del sitio, luego raíz del dominio, luego búsqueda validada por nombre.
     discovery: [website, website_root, name_search]
     nameSearch: { requireAllNameWords: true }

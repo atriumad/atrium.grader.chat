@@ -15,7 +15,9 @@ const errMsg = (e: unknown) => (e instanceof Error ? e.message : "error")
 
 // Reads every social network of a business. Instagram is the anchor; the other networks add to it.
 // Order: links on the website (home page too), then a name-validated Google search.
-export async function readSocials(place: Pick<Place, "name" | "address" | "website">): Promise<Socials> {
+// `instagramOnly` skips Facebook/TikTok/YouTube: used for competitors, where Instagram is enough
+// to compare and every extra network is billed.
+export async function readSocials(place: Pick<Place, "name" | "address" | "website">, opts: { instagramOnly?: boolean } = {}): Promise<Socials> {
   const links = await findSocialLinks(place.website)
   let searchFailure: FailureClass | undefined
   if (!links.instagram) {
@@ -38,10 +40,10 @@ export async function readSocials(place: Pick<Place, "name" | "address" | "websi
         )
       : Promise.resolve<Pick<Socials, "instagram" | "instagramNote" | "instagramFailure">>(
           searchFailure
-            ? { instagram: null, instagramNote: `No se pudo buscar Instagram en Google (${searchFailure})`, instagramFailure: searchFailure }
-            : { instagram: null, instagramNote: "No se encontró Instagram ni en su sitio web ni en Google" }
+            ? { instagram: null, instagramNote: `Instagram could not be searched on Google (${searchFailure})`, instagramFailure: searchFailure }
+            : { instagram: null, instagramNote: "Instagram was not found on its website or on Google" }
         ),
-    getNetworkStats(links),
+    opts.instagramOnly ? Promise.resolve({ networks: [] as NetworkStats[], note: undefined }) : getNetworkStats(links),
   ])
   return { ...instagram, networks: others.networks, networksNote: others.note }
 }

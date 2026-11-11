@@ -30,12 +30,12 @@ export async function POST(req: Request) {
     } else if (typeof pasted === "string") {
       content = pasted
     }
-    const title = String(form.get("title") ?? "").trim() || sourceName?.replace(/\.[^.]+$/, "") || "Nota"
+    const title = String(form.get("title") ?? "").trim() || sourceName?.replace(/\.[^.]+$/, "") || "Note"
     const tags = String(form.get("tags") ?? "").split(",")
     const r = await addDoc({ title, content, kind, sourceName, tags, pinned: form.get("pinned") === "true", by: a.admin.email })
     invalidatePinned()
     return Response.json({ ok: true, ...r })
   } catch (e) {
-    return Response.json({ error: e instanceof Error ? e.message : "No se pudo guardar el documento." }, { status: 400 })
+    return Response.json({ error: e instanceof Error ? e.message : "Could not save the document." }, { status: 400 })
   }
 }

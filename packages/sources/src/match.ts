@@ -67,7 +67,7 @@ export function decide(query: string, candidates: Place[]): Decision {
     return {
       action: "ask",
       reason: "typo",
-      message: `No encontré una coincidencia clara con "${query}". ¿Quisiste decir alguno de estos?`,
+      message: `I could not find a clear match for "${query}". Did you mean one of these?`,
       options: candidates.slice(0, 5),
     }
   }
@@ -79,7 +79,7 @@ export function decide(query: string, candidates: Place[]): Decision {
     return {
       action: "ask",
       reason: "multiple",
-      message: `Encontré ${tied.length} locales de "${query}". ¿Cuál quieres analizar?`,
+      message: `I found ${tied.length} locations of "${query}". Which one do you want to analyze?`,
       // Busiest location first: usually the main one, and the best default to show.
       options: tied.map((s) => s.p).sort((a, b) => (b.reviews ?? 0) - (a.reviews ?? 0)),
     }
@@ -94,7 +94,7 @@ export function decide(query: string, candidates: Place[]): Decision {
   return {
     action: "ask",
     reason: "confirm",
-    message: `No estoy seguro de que sea el negocio que buscas. ¿Es alguno de estos?`,
+    message: `I am not sure this is the business you are looking for. Is it one of these?`,
     options: scored.filter((s) => s.score >= 0.3).slice(0, 4).map((s) => s.p),
   }
 }

@@ -20,21 +20,21 @@ export function Scan({ steps, name }: { steps: ScanStep[]; name?: string }) {
   const pct = analysisDone ? 100 : Math.min(92, Math.round((finished / Math.max(EXPECTED, steps.length)) * 100))
 
   return (
-    <section aria-label="Análisis en curso" className="mx-auto flex w-full max-w-2xl flex-col items-center gap-8 py-8 text-center">
+    <section aria-label="Analysis in progress" className="mx-auto flex w-full max-w-2xl flex-col items-center gap-8 py-8 text-center">
       <div className="flex flex-col items-center gap-3">
-        <p className="text-sm text-muted-foreground">El análisis</p>
+        <p className="text-sm text-muted-foreground">The analysis</p>
         <h1 className="font-display text-4xl leading-[1.08] text-balance sm:text-5xl">
-          Estamos haciendo <em>la tarea.</em>
+          We are doing <em>the homework.</em>
         </h1>
         <p className="max-w-[48ch] text-base/relaxed text-muted-foreground text-pretty">
-          {name ? `Leyendo todo lo que ve un cliente antes de elegir ${name}.` : "Leyendo todo lo que ve un cliente antes de elegir."}
+          {name ? `Reading everything a customer sees before choosing ${name}.` : "Reading everything a customer sees before choosing."}
         </p>
       </div>
 
       <div className="flex w-full flex-col gap-6 rounded-3xl bg-foreground p-6 text-left text-primary-foreground sm:p-8">
         <div className="flex flex-col gap-3">
           <div className="flex items-baseline justify-between gap-3 text-sm">
-            <span>{analysisDone ? "Análisis completo" : "Leyendo fuentes públicas"}</span>
+            <span>{analysisDone ? "Analysis complete" : "Reading public sources"}</span>
             <span className="tnum opacity-70">{pct}%</span>
           </div>
           <div
@@ -73,7 +73,7 @@ export function Scan({ steps, name }: { steps: ScanStep[]; name?: string }) {
         </ol>
       </div>
 
-      <p className="text-xs text-muted-foreground">Tu reporte se abre aquí cuando termine el último paso.</p>
+      <p className="text-xs text-muted-foreground">Your report opens here when the last step finishes.</p>
     </section>
   )
 }

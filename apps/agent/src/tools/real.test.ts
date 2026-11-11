@@ -1,7 +1,11 @@
 import assert from "node:assert/strict"
 import { afterEach, beforeEach, test } from "node:test"
+import { clearMemoryCache } from "@atrium/sources/cache"
 import { findCompetitorsTool, googleListing, socialPublic, websiteAudit } from "./real.ts"
 
+import { resolver } from "@atrium/sources/safe-fetch"
+
+resolver.lookup = (async () => [{ address: "93.184.216.34", family: 4 }])
 const realFetch = globalThis.fetch
 const rawPlace = (id: string, name: string, address: string, reviews: number) => ({
   id, displayName: { text: name }, formattedAddress: address, location: { latitude: 1, longitude: 2 },
@@ -10,6 +14,7 @@ const rawPlace = (id: string, name: string, address: string, reviews: number) =>
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } })
 
 beforeEach(() => {
+  clearMemoryCache() // the lookups cache by account: tests must not see each other's results
   process.env.GOOGLE_PLACES_API_KEY = "test"
   process.env.SCRAPECREATORS_API_KEY = "test"
 })
@@ -82,9 +87,9 @@ const audit = (input: Record<string, unknown>, subjectHosts?: string[]) => websi
 test("website_audit: audits the subject's own site", async () => {
   globalThis.fetch = fakeSite()
   const r = await audit({ url: "https://www.biz.test/", city: "Town" }, ["biz.test"])
-  const d = r.data as { tieneSchemaRestaurante: boolean; title: { mencionaCiudad: boolean }; viewportMovil: boolean }
+  const d = r.data as { hasRestaurantSchema: boolean; title: { mentionsCity: boolean }; mobileViewport: boolean }
   assert.equal(r.status, "ok")
-  assert.deepEqual([d.tieneSchemaRestaurante, d.title.mencionaCiudad, d.viewportMovil], [true, true, true])
+  assert.deepEqual([d.hasRestaurantSchema, d.title.mentionsCity, d.mobileViewport], [true, true, true])
 })
 
 test("website_audit: refuses other hosts, private hosts, no known subject host, and cross-domain redirects", async () => {
@@ -98,7 +103,7 @@ test("website_audit: refuses other hosts, private hosts, no known subject host, 
   globalThis.fetch = fakeSite("https://evil.test/")
   const r = await audit({ url: "https://biz.test" }, ["biz.test"])
   assert.equal(r.status, "empty")
-  assert.match((r.data as { resultado: string }).resultado, /redirige/)
+  assert.match((r.data as { result: string }).result, /redirects/)
 })
 
 test("website_audit: a timeout is reported as a failure", async () => {
@@ -111,5 +116,5 @@ test("website_audit: an error page or bot wall is empty, not an audit of the wal
   globalThis.fetch = async (url) => { const r = new Response("<title>Human Verification</title>", { status: 405 }); Object.defineProperty(r, "url", { value: String(url) }); return r }
   const r = await audit({ url: "https://biz.test" }, ["biz.test"])
   assert.equal(r.status, "empty")
-  assert.match((r.data as { resultado: string }).resultado, /405/)
+  assert.match((r.data as { result: string }).result, /405/)
 })

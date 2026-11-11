@@ -15,10 +15,10 @@ import { allow, clientKey } from "@/lib/rate-limit"
 export const maxDuration = 120
 
 const STATUS: Record<string, string> = {
-  get_live_social_stats: "Consultando redes sociales…",
+  get_live_social_stats: "Checking social networks…",
   get_live_google_reputation: "Consultando Google Maps…",
-  audit_website_seo: "Revisando el sitio web…",
-  check_google_ranking: "Buscando en Google…",
+  audit_website_seo: "Checking the website…",
+  check_google_ranking: "Searching Google…",
 }
 
 type Event = ChatEvent
@@ -51,7 +51,7 @@ function parseMessages(x: unknown): Msg[] | null {
 
 export async function POST(req: Request) {
   if (!allow(`chat:${clientKey(req)}`, 40, 10 * 60_000)) {
-    return Response.json({ error: "Demasiados mensajes seguidos. Espera unos minutos." }, { status: 429 })
+    return Response.json({ error: "Too many messages in a row. Wait a few minutes." }, { status: 429 })
   }
   const body = (await req.json().catch(() => null)) as { messages?: unknown; dataset?: unknown; analysisText?: unknown } | null
   const messages = parseMessages(body?.messages)
@@ -60,11 +60,11 @@ export async function POST(req: Request) {
   const ds = body?.dataset as { scoring?: unknown } | null | undefined
   activateScoring(ds && typeof ds === "object" && ds.scoring ? ds.scoring : scoring.config)
   const data = parseDataset(body?.dataset)
-  if (!messages || !data) return Response.json({ error: "Solicitud no válida." }, { status: 400 })
+  if (!messages || !data) return Response.json({ error: "Invalid request." }, { status: 400 })
   const analysisText = typeof body?.analysisText === "string" ? body.analysisText : ""
 
   const apiKey = process.env.ANTHROPIC_API_KEY
-  if (!apiKey) return Response.json({ error: "Falta ANTHROPIC_API_KEY: el chat necesita la API de Claude." }, { status: 503 })
+  if (!apiKey) return Response.json({ error: "ANTHROPIC_API_KEY is missing: the chat needs the Claude API." }, { status: 503 })
 
   const businessScore = scoreAll(data)[0].total
   const client = new Anthropic({ apiKey })
@@ -79,26 +79,26 @@ export async function POST(req: Request) {
 
       // Runs one tool. Nothing here books anything: propose_booking only shows a card.
       const runTool = async (name: string, input: Record<string, unknown>): Promise<{ content: string; is_error?: boolean }> => {
-        if (!toolEnabled(name, agent.config.tools)) return { content: "Esa herramienta no está disponible.", is_error: true }
+        if (!toolEnabled(name, agent.config.tools)) return { content: "That tool is not available.", is_error: true }
         logEvent("tool_call", { tool: name })
         try {
           if (name === "search_agency_knowledge") {
             const q = String(input.query ?? "").trim()
-            if (q.length < 2) return { content: "Consulta vacía.", is_error: true }
-            send({ type: "status", text: "Buscando en el material de la agencia…" })
+            if (q.length < 2) return { content: "Empty query.", is_error: true }
+            send({ type: "status", text: "Searching the agency's material…" })
             const hits = await searchKnowledge(q, 4)
-            if (!hits.length) return { content: "No hay material de la agencia sobre ese tema. No inventes: dilo con claridad." }
+            if (!hits.length) return { content: "There is no agency material on that topic. Do not invent anything: say so clearly." }
             return { content: JSON.stringify(hits.map((h) => ({ documento: h.title, texto: h.content }))).slice(0, 8000) }
           }
           if (name === "get_availability") {
             const part = input.part_of_day === "morning" || input.part_of_day === "afternoon" ? input.part_of_day : "any"
             const days = Number.isInteger(input.days_ahead) ? Math.min(14, Math.max(1, input.days_ahead as number)) : 14
             const slots = await availableSlots({ partOfDay: part, daysAhead: days })
-            if (!slots.length) return { content: "No hay horarios libres con ese criterio. Prueba otro día o franja." }
+            if (!slots.length) return { content: "There are no free slots for that criterion. Try another day or time range." }
             send({ type: "slots", slots })
             return {
               content:
-                `Se mostraron ${slots.length} horarios al usuario como botones. Zona horaria de la agencia. Horarios (usa 'start' tal cual en propose_booking):\n` +
+                `${slots.length} time slots were shown to the user as buttons. Times are in the agency's time zone. Slots (use 'start' exactly as given in propose_booking):\n` +
                 JSON.stringify(slots.map((s) => ({ start: s.start, label: s.label }))),
             }
           }
@@ -112,16 +112,16 @@ export async function POST(req: Request) {
               businessName: data.business.name,
               score: businessScore,
             })
-            if (!v.ok) return { content: `Datos no válidos: ${v.error} Pídeselos de nuevo al usuario.`, is_error: true }
+            if (!v.ok) return { content: `Invalid details: ${v.error} Ask the user for them again.`, is_error: true }
             const slot = await findFreeSlot(v.value.start)
-            if (!slot) return { content: "Ese horario ya no está disponible. Consulta disponibilidad otra vez y ofrece otros.", is_error: true }
+            if (!slot) return { content: "That time slot is no longer available. Check availability again and offer others.", is_error: true }
             send({
               type: "proposal",
               proposal: { start: slot.start, label: slot.label, name: v.value.name, email: v.value.email, phone: v.value.phone, notes: v.value.notes },
             })
             return {
               content:
-                "Tarjeta mostrada al usuario. La reunión NO está agendada: falta que él pulse Confirmar. Dile que revise los datos y confirme; no digas que ya está reservada.",
+                "Card shown to the user. The meeting is NOT booked: they still have to press Confirm. Tell them to review the details and confirm; do not say it is already booked.",
             }
           }
           if (name === "get_live_social_stats" || name === "get_live_google_reputation" || name === "audit_website_seo" || name === "check_google_ranking") {
@@ -133,13 +133,13 @@ export async function POST(req: Request) {
         } catch (e) {
           if (name !== "get_availability" && name !== "propose_booking") {
             logEvent("tool_error", { tool: name, error: e instanceof Error ? e.message.slice(0, 160) : "error" })
-            return { content: `La consulta falló: ${e instanceof Error ? e.message : "error"}. Dilo con claridad y usa los datos del diagnóstico.`, is_error: true }
+            return { content: `The lookup failed: ${e instanceof Error ? e.message : "error"}. Say so clearly and use the diagnosis data.`, is_error: true }
           }
           if (e instanceof BookingError) {
-            const msg = e.code === "not_configured" ? "La agenda no está configurada en el servidor todavía." : e.message
+            const msg = e.code === "not_configured" ? "The calendar is not configured on the server yet." : e.message
             return { content: msg, is_error: true }
           }
-          return { content: "La herramienta falló. Discúlpate con el usuario sin inventar otra forma de contacto.", is_error: true }
+          return { content: "The tool failed. Apologize to the user without inventing another way to get in touch.", is_error: true }
         }
       }
 
@@ -167,9 +167,9 @@ export async function POST(req: Request) {
           }
           convo.push({ role: "user", content: results })
         }
-        send({ type: "error", text: "El asistente dio demasiadas vueltas. Intenta de nuevo." })
+        send({ type: "error", text: "The assistant took too many steps. Try again." })
       } catch (e) {
-        send({ type: "error", text: e instanceof Error ? e.message : "Error inesperado" })
+        send({ type: "error", text: e instanceof Error ? e.message : "Unexpected error" })
       } finally {
         controller.close()
       }

@@ -39,7 +39,7 @@ type AssistantTurn = {
 type ChatTurn = { id: string; role: "chat"; text: string; slots?: Slot[]; proposal?: Proposal; running: boolean; error?: boolean }
 type Turn = { id: string; role: "user"; text: string } | AssistantTurn | ChatTurn
 
-const SUGGESTIONS = ["¿Por qué tengo este puntaje?", "¿Qué hago primero?", "Quiero agendar una reunión"]
+const SUGGESTIONS = ["Why is my score what it is?", "What should I do first?", "I want to book a meeting"]
 
 let counter = 0
 const nextId = () => `t${++counter}`
@@ -124,7 +124,7 @@ export default function Home() {
         if (controller.signal.aborted) {
           patch(id, () => ({ running: false }))
         } else {
-          patch(id, () => ({ text: e instanceof Error ? e.message : "Error inesperado", error: true, running: false }))
+          patch(id, () => ({ text: e instanceof Error ? e.message : "Unexpected error", error: true, running: false }))
         }
       } finally {
         pacer.stop()
@@ -195,7 +195,7 @@ export default function Home() {
       } catch (e) {
         const rest = pacer.text
         if (controller.signal.aborted) patchChat(id, (t) => ({ text: t.error ? t.text : rest, running: false }))
-        else patchChat(id, () => ({ text: e instanceof Error ? e.message : "Error inesperado", error: true, running: false }))
+        else patchChat(id, () => ({ text: e instanceof Error ? e.message : "Unexpected error", error: true, running: false }))
       } finally {
         pacer.stop()
         abortRef.current = null
@@ -214,7 +214,7 @@ export default function Home() {
       <TextInput
         value={draft}
         onChangeText={setDraft}
-        placeholder={report ? "Pregúntame sobre este análisis" : "Nombre y ciudad, o @usuario de Instagram"}
+        placeholder={report ? "Ask me about this analysis" : "Business name and city, or @instagram"}
         placeholderTextColor={colors.mutedForeground}
         style={styles.input}
         returnKeyType="send"
@@ -242,7 +242,7 @@ export default function Home() {
           <Text style={styles.brand}>Atrium</Text>
           {empty ? null : (
             <Pressable onPress={() => !busy && setTurns([])} disabled={busy} accessibilityRole="button">
-              <Text style={[styles.link, busy && { opacity: 0.4 }]}>Nuevo análisis</Text>
+              <Text style={[styles.link, busy && { opacity: 0.4 }]}>New analysis</Text>
             </Pressable>
           )}
         </View>
@@ -250,10 +250,9 @@ export default function Home() {
         {empty ? (
           <View style={styles.hero}>
             <HeroGlow />
-            <Text style={styles.title}>¿Cómo está tu negocio frente a la competencia?</Text>
+            <Text style={styles.title}>How does your business stack up against the competition?</Text>
             <Text style={styles.subtitle}>
-              Escribe el nombre con la ciudad, o su @ de Instagram, que es más preciso. Comparo su Google e Instagram con los negocios de su
-              entorno.
+              Type the business name and city, or its Instagram @, which is more precise. I compare its Google and Instagram presence with the businesses around it.
             </Text>
             <View style={{ alignSelf: "stretch" }}>{composer}</View>
           </View>
@@ -284,7 +283,7 @@ export default function Home() {
                         businessName={report.data.business.name}
                         score={scoreAll(report.data)[0]?.total ?? null}
                         active={lastId === t.id}
-                        onConflict={() => void ask("Ese horario ya no está disponible, ¿qué otras opciones hay?")}
+                        onConflict={() => void ask("That time slot is no longer available. What other options are there?")}
                       />
                     ) : null}
                   </View>
@@ -321,7 +320,7 @@ export default function Home() {
                         ) : (
                           <View style={styles.step}>
                             <ActivityIndicator size="small" color={colors.brand} />
-                            <Text style={[styles.stepText, { color: colors.foreground }]}>Escribiendo el análisis…</Text>
+                            <Text style={[styles.stepText, { color: colors.foreground }]}>Writing the analysis…</Text>
                           </View>
                         )}
                       </Report>

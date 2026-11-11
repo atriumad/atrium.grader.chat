@@ -39,7 +39,7 @@ export const googleListing: ToolDef = {
   },
   summarize(r) {
     const d = r.data as { name?: string; rating?: number | null; needsChoice?: unknown[] } | null
-    if (d?.needsChoice) return `${d.needsChoice.length} locales posibles`
+    if (d?.needsChoice) return `${d.needsChoice.length} possible locations`
     return d?.name ? `${d.name}${d.rating ? ` · ${d.rating}★` : ""}` : undefined
   },
 }
@@ -59,7 +59,7 @@ export const findCompetitorsTool: ToolDef = {
   },
   summarize(r) {
     const list = (r.data as { competitors?: unknown[] } | null)?.competitors
-    return list ? `${list.length} cerca` : undefined
+    return list ? `${list.length} nearby` : undefined
   },
 }
 
@@ -69,7 +69,7 @@ export const socialPublic: ToolDef = {
     const name = str(input.name)
     if (!name) return done("empty", null, PROFILE)
     try {
-      const socials = await readSocials({ name, address: str(input.address) ?? "", website: str(input.website) ?? null })
+      const socials = await readSocials({ name, address: str(input.address) ?? "", website: str(input.website) ?? null }, { instagramOnly: input.instagramOnly === true })
       if (socials.instagram || socials.networks.length) return done("ok", socials, PROFILE)
       // Nothing found: a provider failure is reported as such, never as "the business has no accounts".
       if (socials.instagramFailure) return failure(socials.instagramFailure, PROFILE)
@@ -82,7 +82,7 @@ export const socialPublic: ToolDef = {
     const d = r.data as { instagram?: { handle?: string; followers?: number | null } | null; networks?: unknown[] } | null
     if (!d) return undefined
     const ig = d.instagram?.handle ? `@${d.instagram.handle}` : null
-    const others = d.networks?.length ? `${d.networks.length} red(es) más` : null
+    const others = d.networks?.length ? `${d.networks.length} more network(s)` : null
     return [ig, others].filter(Boolean).join(" · ") || undefined
   },
 }
@@ -101,8 +101,8 @@ export const websiteAudit: ToolDef = {
     }
   },
   summarize(r) {
-    const d = r.data as { tiempoRespuestaMs?: number; resultado?: string; datosEstructurados?: unknown[] } | null
-    if (d?.resultado) return d.resultado
-    return d?.tiempoRespuestaMs != null ? `${d.tiempoRespuestaMs} ms · ${d.datosEstructurados?.length ?? 0} schema` : undefined
+    const d = r.data as { responseTimeMs?: number; result?: string; structuredData?: unknown[] } | null
+    if (d?.result) return d.result
+    return d?.responseTimeMs != null ? `${d.responseTimeMs} ms · ${d.structuredData?.length ?? 0} schema` : undefined
   },
 }

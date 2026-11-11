@@ -21,7 +21,7 @@ type Doc = {
 }
 
 const ACCEPT = ".pdf,.txt,.md,.markdown,.csv,.json"
-const nf = new Intl.NumberFormat("es")
+const nf = new Intl.NumberFormat("en-US")
 
 export function KnowledgeManager({ initial }: { initial: Doc[] }) {
   const router = useRouter()
@@ -65,14 +65,14 @@ export function KnowledgeManager({ initial }: { initial: Doc[] }) {
     const json = res ? await res.json().catch(() => ({})) : {}
     setBusy(false)
     if (res?.ok) {
-      setMsg({ ok: true, text: `Guardado en ${json.chunks} fragmentos. Ya está disponible para los agentes.` })
+      setMsg({ ok: true, text: `Saved in ${json.chunks} chunks. It is now available to the agents.` })
       setFile(null)
       setText("")
       setTitle("")
       setTags("")
       setPinned(false)
       router.refresh()
-    } else setMsg({ ok: false, text: json.error ?? "No se pudo guardar." })
+    } else setMsg({ ok: false, text: json.error ?? "Could not save." })
   }
 
   async function patch(id: string, body: Record<string, unknown>) {
@@ -82,7 +82,7 @@ export function KnowledgeManager({ initial }: { initial: Doc[] }) {
   }
 
   async function remove(d: Doc) {
-    if (!window.confirm(`¿Eliminar "${d.title}"? No se puede deshacer.`)) return
+    if (!window.confirm(`Delete "${d.title}"? This cannot be undone.`)) return
     setDocs((x) => x.filter((y) => y.id !== d.id))
     const res = await fetch(`/api/admin/knowledge/${d.id}`, { method: "DELETE" }).catch(() => null)
     if (!res?.ok) router.refresh()
@@ -101,12 +101,12 @@ export function KnowledgeManager({ initial }: { initial: Doc[] }) {
   return (
     <div className="grid gap-6 xl:grid-cols-[22rem_1fr]">
       <div className="flex flex-col gap-6">
-        <Card title="Añadir contenido" hint="PDF, TXT, MD, CSV o JSON (hasta 5 MB), o pega el texto.">
+        <Card title="Add content" hint="PDF, TXT, MD, CSV or JSON (up to 5 MB), or paste the text.">
           <form onSubmit={upload} className="flex flex-col gap-3">
-            <div role="tablist" aria-label="Tipo de contenido" className="flex gap-1 rounded-lg bg-muted p-1 text-sm">
+            <div role="tablist" aria-label="Content type" className="flex gap-1 rounded-lg bg-muted p-1 text-sm">
               {(["file", "text"] as const).map((m) => (
                 <button key={m} type="button" role="tab" aria-selected={mode === m} onClick={() => setMode(m)} className={`flex-1 rounded-md px-3 py-1 transition-colors ${mode === m ? "bg-card font-medium shadow-sm" : "text-muted-foreground"}`}>
-                  {m === "file" ? "Archivo" : "Pegar texto"}
+                  {m === "file" ? "File" : "Paste text"}
                 </button>
               ))}
             </div>
@@ -132,33 +132,33 @@ export function KnowledgeManager({ initial }: { initial: Doc[] }) {
                     {file.name} <span className="font-normal text-muted-foreground">· {Math.round(file.size / 1024)} KB</span>
                   </p>
                 ) : (
-                  <p className="text-muted-foreground">Arrastra un archivo aquí</p>
+                  <p className="text-muted-foreground">Drag a file here</p>
                 )}
                 <Button type="button" variant="outline" size="sm" onClick={() => inputRef.current?.click()}>
-                  {file ? "Cambiar archivo" : "Elegir archivo"}
+                  {file ? "Change file" : "Choose file"}
                 </Button>
               </div>
             ) : (
-              <textarea className={textareaCls} rows={8} value={text} onChange={(e) => setText(e.target.value)} placeholder="Ej.: Servicios: gestión de Instagram desde… Casos: …" />
+              <textarea className={textareaCls} rows={8} value={text} onChange={(e) => setText(e.target.value)} placeholder="E.g.: Services: Instagram management from… Case studies: …" />
             )}
 
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium">Título</span>
-              <input className={inputCls} value={title} maxLength={160} onChange={(e) => setTitle(e.target.value)} placeholder={file ? file.name.replace(/\.[^.]+$/, "") : "Servicios y precios"} />
+              <span className="font-medium">Title</span>
+              <input className={inputCls} value={title} maxLength={160} onChange={(e) => setTitle(e.target.value)} placeholder={file ? file.name.replace(/\.[^.]+$/, "") : "Services and prices"} />
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium">Etiquetas</span>
-              <input className={inputCls} value={tags} onChange={(e) => setTags(e.target.value)} placeholder="servicios, casos, precios" />
+              <span className="font-medium">Tags</span>
+              <input className={inputCls} value={tags} onChange={(e) => setTags(e.target.value)} placeholder="services, case studies, prices" />
             </label>
             <label className="flex cursor-pointer items-start gap-2.5 text-sm">
               <input type="checkbox" className="mt-0.5 size-4 accent-[var(--brand)]" checked={pinned} onChange={(e) => setPinned(e.target.checked)} />
               <span className="text-pretty">
-                <span className="font-medium">Usar siempre</span>
-                <span className="block text-xs text-muted-foreground">Se incluye en cada chat y análisis (hasta ~6,000 caracteres en total). Para lo esencial y corto.</span>
+                <span className="font-medium">Always use</span>
+                <span className="block text-xs text-muted-foreground">Included in every chat and analysis (up to ~6,000 characters in total). For what is essential and short.</span>
               </span>
             </label>
             <Button type="submit" disabled={!canSave || busy}>
-              {busy ? "Procesando…" : "Guardar"}
+              {busy ? "Processing…" : "Save"}
             </Button>
             {msg ? (
               <p role={msg.ok ? "status" : "alert"} className={`text-sm text-pretty ${msg.ok ? "text-positive" : "text-destructive"}`}>
@@ -168,11 +168,11 @@ export function KnowledgeManager({ initial }: { initial: Doc[] }) {
           </form>
         </Card>
 
-        <Card title="Probar búsqueda" hint="Mira qué fragmentos recibiría el agente para una pregunta.">
+        <Card title="Test search" hint="See which chunks the agent would receive for a question.">
           <form onSubmit={search} className="flex gap-2">
-            <input className={inputCls} value={q} onChange={(e) => setQ(e.target.value)} placeholder="¿Qué servicios ofrecen?" />
+            <input className={inputCls} value={q} onChange={(e) => setQ(e.target.value)} placeholder="What services do you offer?" />
             <Button type="submit" variant="outline" disabled={searching || q.trim().length < 2}>
-              {searching ? "…" : "Buscar"}
+              {searching ? "…" : "Search"}
             </Button>
           </form>
           {hits ? (
@@ -186,13 +186,13 @@ export function KnowledgeManager({ initial }: { initial: Doc[] }) {
                 ))}
               </ul>
             ) : (
-              <p className="mt-3 text-sm text-muted-foreground">Sin resultados. El agente diría que no tiene esa información.</p>
+              <p className="mt-3 text-sm text-muted-foreground">No results. The agent would say it does not have that information.</p>
             )
           ) : null}
         </Card>
       </div>
 
-      <Card title={`Documentos (${docs.length})`}>
+      <Card title={`Documents (${docs.length})`}>
         {docs.length ? (
           <ul className="flex flex-col divide-y">
             {docs.map((d) => (
@@ -201,23 +201,23 @@ export function KnowledgeManager({ initial }: { initial: Doc[] }) {
                   <div className="min-w-0">
                     <h3 className="font-medium text-pretty">{d.title}</h3>
                     <p className="text-xs text-muted-foreground tnum">
-                      {d.source_name ?? "Texto pegado"} · {nf.format(d.chars)} caracteres · {new Date(d.created_at).toLocaleDateString("es", { dateStyle: "medium" })}
+                      {d.source_name ?? "Pasted text"} · {nf.format(d.chars)} characters · {new Date(d.created_at).toLocaleDateString("es", { dateStyle: "medium" })}
                       {d.created_by ? ` · ${d.created_by}` : ""}
                     </p>
                   </div>
                   <Button variant="ghost" size="xs" onClick={() => void remove(d)}>
-                    Eliminar
+                    Delete
                   </Button>
                 </div>
                 <p className="line-clamp-2 text-sm text-muted-foreground text-pretty">{d.preview}</p>
                 <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
                   <label className="flex cursor-pointer items-center gap-2">
                     <input type="checkbox" className="size-4 accent-[var(--brand)]" checked={d.enabled} onChange={(e) => void patch(d.id, { enabled: e.target.checked })} />
-                    Activo
+                    Active
                   </label>
                   <label className="flex cursor-pointer items-center gap-2">
                     <input type="checkbox" className="size-4 accent-[var(--brand)]" checked={d.pinned} onChange={(e) => void patch(d.id, { pinned: e.target.checked })} />
-                    Usar siempre
+                    Always use
                   </label>
                   {d.tags.map((t) => (
                     <span key={t} className="rounded-full bg-secondary px-2 py-0.5 text-xs text-muted-foreground">
@@ -229,7 +229,7 @@ export function KnowledgeManager({ initial }: { initial: Doc[] }) {
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-muted-foreground text-pretty">Aún no hay contenido. Sube tu primer documento: por ejemplo, tus servicios y un caso de éxito.</p>
+          <p className="text-sm text-muted-foreground text-pretty">No content yet. Upload your first document: for example, your services and a case study.</p>
         )}
       </Card>
     </div>
