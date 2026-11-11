@@ -3,6 +3,9 @@ FROM node:24-slim
 ENV NODE_ENV=production
 WORKDIR /app
 
+# Coolify (and most platforms) run their health check with curl inside the container.
+RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
+
 # Only what the agent needs: the workspace manifests first (cached layer), then the sources.
 COPY package.json package-lock.json ./
 COPY apps/agent/package.json apps/agent/
