@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import { afterEach, beforeEach, test } from "node:test"
-import { findCompetitorsTool, googleListing, socialPublic } from "./real.ts"
+import { findCompetitorsTool, googleListing, socialPublic, websiteAudit } from "./real.ts"
 
 const realFetch = globalThis.fetch
 const rawPlace = (id: string, name: string, address: string, reviews: number) => ({
@@ -66,4 +66,50 @@ test("social_public: a failing search fallback is a failure; a clean miss is emp
   globalThis.fetch = async (url) => (String(url).includes("scrapecreators") ? json({ results: [{ title: "Unrelated", url: "https://www.instagram.com/someoneelse/" }] }) : new Response(site))
   const miss = await socialPublic.run({ name: "Biz", address: "1 St, Town, TS", website: "https://biz.test" }, { signal: new AbortController().signal })
   assert.equal(miss.status, "empty")
+})
+
+const HOME = '<html><head><title>Biz Town</title><meta name="description" content="Tacos"><meta name="viewport" content="width=device-width"><script type="application/ld+json">{"@type":"Restaurant"}</script></head><body><h1>Biz</h1><p>menu 555 123 4567</p></body></html>'
+const fakeSite = (finalUrl?: string) => async (url: string | URL | Request) => {
+  const u = String(url)
+  if (u.endsWith("/robots.txt")) return new Response("User-agent: *\nAllow: /")
+  if (u.endsWith("/sitemap.xml")) return new Response("<urlset/>")
+  const res = new Response(HOME, { status: 200 })
+  Object.defineProperty(res, "url", { value: finalUrl ?? u })
+  return res
+}
+const audit = (input: Record<string, unknown>, subjectHosts?: string[]) => websiteAudit.run(input, { signal: new AbortController().signal, subjectHosts })
+
+test("website_audit: audits the subject's own site", async () => {
+  globalThis.fetch = fakeSite()
+  const r = await audit({ url: "https://www.biz.test/", city: "Town" }, ["biz.test"])
+  const d = r.data as { tieneSchemaRestaurante: boolean; title: { mencionaCiudad: boolean }; viewportMovil: boolean }
+  assert.equal(r.status, "ok")
+  assert.deepEqual([d.tieneSchemaRestaurante, d.title.mencionaCiudad, d.viewportMovil], [true, true, true])
+})
+
+test("website_audit: refuses other hosts, private hosts, no known subject host, and cross-domain redirects", async () => {
+  let fetched = 0
+  globalThis.fetch = async () => (fetched++, new Response(HOME))
+  assert.equal((await audit({ url: "https://other.test" }, ["biz.test"])).status, "empty")
+  assert.equal((await audit({ url: "http://169.254.169.254/latest" }, ["169.254.169.254"])).status, "empty")
+  assert.equal((await audit({ url: "http://localhost:3000" }, ["localhost"])).status, "empty")
+  assert.equal((await audit({ url: "https://biz.test" })).status, "empty") // ctx without subjectHosts
+  assert.equal(fetched, 0)
+  globalThis.fetch = fakeSite("https://evil.test/")
+  const r = await audit({ url: "https://biz.test" }, ["biz.test"])
+  assert.equal(r.status, "empty")
+  assert.match((r.data as { resultado: string }).resultado, /redirige/)
+})
+
+test("website_audit: a timeout is reported as a failure", async () => {
+  globalThis.fetch = async () => { throw Object.assign(new Error("t"), { name: "TimeoutError" }) }
+  const r = await audit({ url: "https://biz.test" }, ["biz.test"])
+  assert.deepEqual([r.status, r.errorClass], ["error", "timeout"])
+})
+
+test("website_audit: an error page or bot wall is empty, not an audit of the wall", async () => {
+  globalThis.fetch = async (url) => { const r = new Response("<title>Human Verification</title>", { status: 405 }); Object.defineProperty(r, "url", { value: String(url) }); return r }
+  const r = await audit({ url: "https://biz.test" }, ["biz.test"])
+  assert.equal(r.status, "empty")
+  assert.match((r.data as { resultado: string }).resultado, /405/)
 })

@@ -1,6 +1,7 @@
 import type { AgentConfig, CallerConfig } from "./config.ts"
 import { PolicyError, requiresClientId, resolveAccess } from "./policy.ts"
 import type { Entity } from "@atrium/shared/types"
+import { hostOf } from "@atrium/sources/website-audit"
 import { groupByAccount, hasAccounts, type Grouped } from "@atrium/sources/competitors"
 import type { Registry, ToolResult } from "./tools/types.ts"
 import { failure } from "./tools/types.ts"
@@ -33,6 +34,7 @@ export async function runResearch(deps: RunDeps, caller: CallerConfig, request: 
   // Holds the promise, so an identical call made while the first is still running shares it.
   const cache = new Map<string, Promise<ToolResult>>()
   let toolCalls = 0
+  let subjectHosts: string[] = [] // hosts of the identified business; fetching tools stay inside them
   let costCents = 0
 
   const budgetLeft = (estimate: number): boolean =>
@@ -80,7 +82,7 @@ export async function runResearch(deps: RunDeps, caller: CallerConfig, request: 
             resolve(failure("timeout"))
           }, (cfg?.timeoutSeconds ?? 30) * 1000)
         })
-        return await Promise.race([def.run(input, { signal: controller.signal, clientId: request.subject.clientId }), timeout])
+        return await Promise.race([def.run(input, { signal: controller.signal, clientId: request.subject.clientId, subjectHosts }), timeout])
       } catch {
         return failure("unknown")
       } finally {
@@ -131,12 +133,14 @@ export async function runResearch(deps: RunDeps, caller: CallerConfig, request: 
   }
   facts.listing = listing
   const place = listingData as Place
+  const subjectHost = place.website ? hostOf(place.website) : null
+  if (subjectHost) subjectHosts = [subjectHost]
 
   // 2. Business social, competitors and website, independent of each other.
   const [social, competitors, website] = await Promise.all([
     call("social_public", { name: place.name, address: place.address, website: place.website }, "social", "Leyendo las redes del negocio"),
     call("find_competitors", { placeId: place.id }, "competitors", "Buscando competidores cercanos"),
-    place.website ? call("website_audit", { url: place.website }, "website", "Revisando el sitio web") : Promise.resolve<Outcome>({ kind: "skipped", reason: "no_data" }),
+    place.website ? call("website_audit", { url: place.website, name: place.name, city: place.address?.split(",")[1]?.trim() }, "website", "Revisando el sitio web") : Promise.resolve<Outcome>({ kind: "skipped", reason: "no_data" }),
   ])
   const socialData = take("social", social)
   if (socialData) facts.social = socialData

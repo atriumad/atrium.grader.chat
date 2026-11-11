@@ -70,7 +70,7 @@ tools:
     cache: { ttlSeconds: 604800 }
 
   website_audit:
-    enabled: false                 # se activa al portar PageSpeed y el scanner de atrium.platform
+    enabled: true                  # revisión de la portada (SEO básico); PageSpeed y el scanner de atrium.platform siguen pendientes
     profile: public
     timeoutSeconds: 30
     costCentsEstimate: 2

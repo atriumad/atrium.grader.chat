@@ -109,3 +109,13 @@ test("rival locations sharing accounts fold into one brand and do not use up the
   assert.deepEqual(social.map((s) => s.name), ["A1 · 2 locales", "B", "C"]) // Biz2 is the business itself, A2 folded into A1
   assert.deepEqual(r.facts.competitorGrouping, { merged: 1, sameBrandAsBusiness: 1 })
 })
+
+test("website_audit runs inside the subject's host only", async () => {
+  const on = structuredClone(config)
+  on.tools.website_audit = { ...on.tools.website_audit, enabled: true, timeoutSeconds: 1, costCentsEstimate: 2 }
+  let seen: string[] | undefined
+  const tools = [...happyTools(), tool("website_audit", async (_i, ctx) => ((seen = ctx.subjectHosts), ok({ url: "https://biz.test" })))]
+  const r = await runResearch({ config: on, registry: createRegistry(tools) }, on.callers[0], req, () => {})
+  assert.deepEqual(seen, ["biz.test"])
+  assert.ok(r.facts.websiteAudit)
+})

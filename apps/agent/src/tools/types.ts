@@ -12,6 +12,8 @@ export type ToolResult = {
 export type ToolContext = {
   signal: AbortSignal
   clientId?: string
+  // Hosts that belong to the subject (from its listing). Tools that fetch arbitrary URLs stay inside this set.
+  subjectHosts?: string[]
 }
 
 export type ToolDef = {

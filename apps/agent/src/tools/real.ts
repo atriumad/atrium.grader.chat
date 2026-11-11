@@ -2,12 +2,14 @@ import { classifyError } from "@atrium/sources/errors"
 import { decide } from "@atrium/sources/match"
 import { findCandidates, findCompetitors, getPlace } from "@atrium/sources/places"
 import { readSocials } from "@atrium/sources/read-socials"
+import { auditWebsite } from "@atrium/sources/website-audit"
 import type { ToolDef, ToolResult } from "./types.ts"
 import { failure } from "./types.ts"
 
 // Neutral source labels: vendor names stay out of results (they remain in the admin lookup log).
 const LISTING = "public listing"
 const PROFILE = "public profile"
+const WEBSITE = "business website"
 
 const str = (v: unknown, max = 300): string | undefined => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : undefined)
 const num = (v: unknown, min: number, max: number, fallback: number): number =>
@@ -82,5 +84,25 @@ export const socialPublic: ToolDef = {
     const ig = d.instagram?.handle ? `@${d.instagram.handle}` : null
     const others = d.networks?.length ? `${d.networks.length} red(es) más` : null
     return [ig, others].filter(Boolean).join(" · ") || undefined
+  },
+}
+
+export const websiteAudit: ToolDef = {
+  name: "website_audit",
+  async run(input, ctx) {
+    const url = str(input.url, 500)
+    if (!url) return done("empty", null, WEBSITE)
+    try {
+      // Only the subject's own hosts: with no known host the tool refuses rather than fetch an arbitrary URL.
+      const audit = await auditWebsite(url, { name: str(input.name), city: str(input.city, 80), allowedHosts: ctx.subjectHosts ?? [], signal: ctx.signal })
+      return "url" in audit ? done("ok", audit, WEBSITE) : done("empty", audit, WEBSITE)
+    } catch (e) {
+      return failure(classifyError(e), WEBSITE)
+    }
+  },
+  summarize(r) {
+    const d = r.data as { tiempoRespuestaMs?: number; resultado?: string; datosEstructurados?: unknown[] } | null
+    if (d?.resultado) return d.resultado
+    return d?.tiempoRespuestaMs != null ? `${d.tiempoRespuestaMs} ms · ${d.datosEstructurados?.length ?? 0} schema` : undefined
   },
 }
