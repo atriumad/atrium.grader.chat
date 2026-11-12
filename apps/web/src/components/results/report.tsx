@@ -215,8 +215,11 @@ type Stat = { label: string; value: string | null; unit?: string; avg: string | 
 // always written ("Above / Below competitors"), never carried by colour alone.
 function StatTile({ stat, index }: { stat: Stat; index: number }) {
   return (
-    <div className="reveal-rise flex flex-col justify-between gap-3 rounded-2xl border bg-card p-4" style={{ "--d": `${(index + 1) * 70}ms` } as React.CSSProperties}>
-      <p className="text-sm text-muted-foreground">{stat.label}</p>
+    <div className="reveal-rise flex h-full flex-col justify-between gap-6 rounded-2xl border bg-card p-4" style={{ "--d": `${(index + 1) * 70}ms` } as React.CSSProperties}>
+      <div>
+        <p className="text-sm text-muted-foreground">{stat.label}</p>
+      </div>
+      <div className="flex flex-col gap-3">
       <p className={`font-serif leading-none tnum ${stat.value === null ? "text-2xl text-muted-foreground" : "text-5xl"}`}>
         {stat.value ?? "no data"}
         {stat.value !== null && stat.unit ? <span className="ms-1 font-sans text-base text-muted-foreground">{stat.unit}</span> : null}
@@ -238,6 +241,7 @@ function StatTile({ stat, index }: { stat: Stat; index: number }) {
           </>
         )}
       </p>
+      </div>
     </div>
   )
 }
