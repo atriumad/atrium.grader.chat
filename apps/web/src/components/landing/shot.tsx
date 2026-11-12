@@ -15,7 +15,7 @@ export const SHOTS = {
 const FADE_Y = "linear-gradient(to bottom, #000 56%, transparent 100%)"
 const FADE_XY = `${FADE_Y}, linear-gradient(to right, #000 56%, transparent 90%)`
 
-export function Shot({ shot, alt, variant = "framed", priority = false }: { shot: keyof typeof SHOTS; alt: string; variant?: "bleed" | "framed"; priority?: boolean }) {
+export function Shot({ shot, alt, variant = "framed", crop, priority = false }: { shot: keyof typeof SHOTS; alt: string; variant?: "bleed" | "framed"; crop?: number; priority?: boolean }) {
   const { desktop, mobile } = SHOTS[shot]
   const bleed = variant === "bleed"
   return (
@@ -23,8 +23,8 @@ export function Shot({ shot, alt, variant = "framed", priority = false }: { shot
       {/* desktop */}
       {bleed ? (
         <div
-          className="hidden max-h-[600px] w-[132%] overflow-hidden rounded-tl-[var(--radius-card)] border-t border-l bg-off-white pt-7 pl-7 sm:block lg:pt-9 lg:pl-9"
-          style={{ maskImage: FADE_XY, WebkitMaskImage: FADE_XY, maskComposite: "intersect", WebkitMaskComposite: "source-in" } as React.CSSProperties}
+          className="hidden w-[132%] overflow-hidden rounded-tl-[var(--radius-card)] border-t border-l bg-off-white pt-7 pl-7 sm:block lg:pt-9 lg:pl-9"
+          style={{ maxHeight: crop ?? 600, maskImage: FADE_XY, WebkitMaskImage: FADE_XY, maskComposite: "intersect", WebkitMaskComposite: "source-in" } as React.CSSProperties}
         >
           <div className="rounded-tl-[var(--radius-card-sm)] border-t border-l bg-card shadow-[var(--shadow-rest)]">
             <Image src={desktop.src} width={desktop.w} height={desktop.h} alt={alt} priority={priority} sizes="(min-width: 1000px) 1320px, 132vw" className="block h-auto w-full" />

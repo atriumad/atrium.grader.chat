@@ -78,7 +78,11 @@ export function Landing() {
             <p className="type-lead mx-auto text-body">A written analysis, the three actions that matter most and a direct line to the team.</p>
           </Reveal>
           <Reveal className="mt-12 w-full" delay={80}>
-            <Shot shot="plan" alt="The written analysis of the report with the three actions that matter most and a button to book a meeting" />
+            <Shot shot="plan" variant="bleed" crop={470} alt="The written analysis of the report with the three actions that matter most and a button to book a meeting" />
+          </Reveal>
+          <Reveal className="mt-2 flex flex-col items-center gap-3" delay={120}>
+            <FocusSearchButton className="h-12 rounded-full px-7 text-base">Get my free score</FocusSearchButton>
+            <p className="text-sm text-muted-foreground">Then ask questions or book a 30-minute call with the team.</p>
           </Reveal>
         </div>
       </section>
