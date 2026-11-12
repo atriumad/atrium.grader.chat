@@ -18,7 +18,8 @@ export class BookingError extends Error {
 }
 
 export function getProvider(cfg: BookingConfig = bookingConfig()): CalendarProvider | null {
-  if (cfg.provider === "mock") return mockProvider
+  // The mock writes to local disk and books nothing real: never serve it in production.
+  if (cfg.provider === "mock") return process.env.NODE_ENV === "production" ? null : mockProvider
   if (cfg.provider === "google") return googleProvider
   return null
 }
