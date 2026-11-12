@@ -5,7 +5,7 @@ import "./globals.css";
 import { SITE, siteUrl } from "@/lib/site";
 
 // Design system typography: Inter Tight sets everything; Instrument Serif italic appears only inside
-// a heading's <em>. (The wordmark is the Logo SVG, so Nimora is never loaded.) Mono is only for code.
+// a heading's <em>, and for the big numbers on score cards (upright). (The wordmark is the Logo SVG, so Nimora is never loaded.) Mono is only for code.
 const interTight = Inter_Tight({
   variable: "--font-inter-tight",
   subsets: ["latin"],
@@ -16,7 +16,7 @@ const instrumentSerif = Instrument_Serif({
   variable: "--font-instrument-serif",
   subsets: ["latin"],
   weight: "400",
-  style: "italic",
+  style: ["normal", "italic"],
   display: "swap",
 });
 

@@ -136,7 +136,7 @@ function ScoreRing({ score, tier }: { score: number | null; tier: Tier }) {
         />
       </svg>
       <div className="absolute inset-0 grid place-content-center text-center">
-        <span className="font-display text-4xl leading-none tnum">{score ?? "—"}</span>
+        <span className="font-serif text-5xl leading-none tnum">{score ?? "—"}</span>
         {score !== null ? <span className="mt-1 text-xs text-muted-foreground">of 100</span> : null}
       </div>
     </div>
@@ -217,7 +217,7 @@ function StatTile({ stat, index }: { stat: Stat; index: number }) {
   return (
     <div className="reveal-rise flex flex-col justify-between gap-3 rounded-2xl border bg-card p-4" style={{ "--d": `${(index + 1) * 70}ms` } as React.CSSProperties}>
       <p className="text-sm text-muted-foreground">{stat.label}</p>
-      <p className={`font-display text-3xl leading-none tnum ${stat.value === null ? "text-muted-foreground" : ""}`}>
+      <p className={`font-serif text-4xl leading-none tnum ${stat.value === null ? "text-muted-foreground" : ""}`}>
         {stat.value ?? "no data"}
         {stat.value !== null && stat.unit ? <span className="ms-1 font-sans text-base text-muted-foreground">{stat.unit}</span> : null}
       </p>
@@ -297,7 +297,7 @@ function Signals({ bench }: { bench: Benchmark[] }) {
                   </span>
                 ) : null}
               </span>
-              <span className="font-display text-2xl leading-none tnum">{b.you === null ? "—" : Math.round(b.you)}</span>
+              <span className="font-serif text-3xl leading-none tnum">{b.you === null ? "—" : Math.round(b.you)}</span>
             </div>
             <Meter value={b.you} mark={b.avg} color={TIER_VAR[tierOf(b.you)]} delay={i * 80} />
             <p className="text-xs text-muted-foreground tnum">
@@ -417,7 +417,7 @@ export function Report({
                           <span className="text-muted-foreground">—</span>
                         ) : (
                           <div className="flex items-center gap-2">
-                            <span className="w-6 shrink-0 font-medium tnum">{r.score}</span>
+                            <span className="w-6 shrink-0 font-serif text-lg leading-none tnum">{r.score}</span>
                             <Meter value={r.score} color={TIER_VAR[r.tier]} delay={160 + i * 50} />
                           </div>
                         )}
