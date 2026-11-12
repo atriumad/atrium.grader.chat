@@ -13,6 +13,7 @@ import {
 import { Prose } from "@/components/results/prose"
 import { Report } from "@/components/results/report"
 import { Scan, type ScanStep } from "@/components/results/scan"
+import { Logo } from "@/components/brand/logo"
 import { HomeContent } from "@/components/seo/home-content"
 import { HomeJsonLd } from "@/components/seo/json-ld"
 import { Bubble, BubbleContent } from "@/components/ui/bubble"
@@ -382,7 +383,7 @@ export default function Page() {
     <main className="flex min-h-svh flex-col bg-background">
       <header className="sticky top-0 z-20 shrink-0 border-b bg-background/90 backdrop-blur">
       <div className="mx-auto flex h-14 w-full max-w-[1400px] items-center justify-between px-4 sm:px-6">
-        <span className="font-display text-lg leading-none">Atrium</span>
+        <Logo variant="wordmark" size={20} />
         {empty ? null : (
           <div className="flex items-center gap-2">
             {report ? (
@@ -405,7 +406,7 @@ export default function Page() {
         <div className="mx-auto flex min-h-[70svh] w-full max-w-2xl flex-col items-center justify-center gap-8 px-4 pb-20 text-center sm:px-6">
           <div className="flex flex-col items-center gap-3">
             <h1 className="font-display text-4xl leading-[1.08] text-balance sm:text-5xl">
-              How does your business stack up against the competition?
+              How does your business stack up <em>against the competition?</em>
             </h1>
             <p className="max-w-[52ch] text-base/relaxed text-muted-foreground text-pretty">
               Type your business name and pick it from the list. I compare its Google and social media presence with the businesses around it.

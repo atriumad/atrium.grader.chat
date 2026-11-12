@@ -7,9 +7,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -477,65 +475,156 @@
     inherits: false;
     initial-value: 0px;
 }
-/* ---- Atrium Grader: warm editorial theme ---- */
+/* ---- Atrium Grader design system ----
+   Raw tokens come from the design system (tokens.json). The shadcn semantic variables below are
+   mapped onto them, so every component, the report and the admin panel share one palette.
+   Do not add colours here that are not in the design system. */
 @theme inline {
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-heading: var(--font-fraunces), ui-serif, Georgia, serif;
-  --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
+  --font-sans: var(--font-inter-tight), system-ui, -apple-system, sans-serif;
+  --font-serif: var(--font-instrument-serif), Georgia, serif;
+  /* Headings are Inter Tight 400. "Display" is not a separate face: the wordmark is the Logo SVG. */
+  --font-heading: var(--font-sans);
+  --font-display: var(--font-sans);
   --color-brand: var(--brand);
   --color-positive: var(--positive);
+  --color-ink: var(--ink);
+  --color-lime: var(--lime);
+  --color-cream: var(--cream);
+  --color-charcoal: var(--charcoal);
+  --color-amber: var(--amber);
+  --color-line: var(--line);
+  --color-health-good: var(--health-good);
+  --color-health-fair: var(--health-fair);
+  --color-health-poor: var(--health-poor);
 }
 
 :root {
-  --background: oklch(0.972 0.012 85);
-  --foreground: oklch(0.22 0.02 60);
-  --card: oklch(0.99 0.007 85);
-  --card-foreground: oklch(0.22 0.02 60);
-  --popover: oklch(0.99 0.007 85);
-  --popover-foreground: oklch(0.22 0.02 60);
-  --primary: oklch(0.22 0.02 60);
-  --primary-foreground: oklch(0.972 0.012 85);
-  --secondary: oklch(0.94 0.014 82);
-  --secondary-foreground: oklch(0.22 0.02 60);
-  --muted: oklch(0.94 0.014 82);
-  --muted-foreground: oklch(0.46 0.02 70);
-  --accent: oklch(0.94 0.014 82);
-  --accent-foreground: oklch(0.22 0.02 60);
-  --border: oklch(0.88 0.016 80);
-  --input: oklch(0.88 0.016 80);
-  --ring: oklch(0.52 0.155 40);
-  --destructive: oklch(0.52 0.18 27);
-  --brand: oklch(0.52 0.155 40);
-  --positive: oklch(0.48 0.1 155);
-  /* Score tiers: green / amber / red-orange, plus neutral for "no data". */
-  --tier-good: oklch(0.58 0.13 155);
-  --tier-medium: oklch(0.74 0.15 75);
-  --tier-low: oklch(0.58 0.19 30);
-  --tier-none: oklch(0.7 0.01 80);
+  /* Surfaces */
+  --cream: #f3efe4;
+  --off-white: #faf9f5;
+  --card: #ffffff;
+  --cool: #e4eef0;
+  --track: #e6e1d4;
+  --track-soft: #ece7db;
+  --pending: #c7cec9;
+  /* Ink and the bright */
+  --ink: #042f34;
+  --lime: #b8e89a;
+  --amber: #ffc933;
+  /* Health */
+  --green: #0e6e64;
+  --green-fill: #1e8c7c;
+  --green-ink: #0a4249;
+  --green-soft: #dcefe9;
+  --amber-fill: #f0b21f;
+  --amber-soft: #fdeec4;
+  --amber-ink: #8a6410;
+  --red-fill: #e08a5b;
+  --red-soft: #f7e2d6;
+  --red-ink: #c0653a;
+  --red-tint: #f0b79b;
+  --error: #b4553a;
+  /* Text. The design system calls its secondary text colour "muted"; shadcn uses --muted for a
+     background, so it lives here as --muted-text (and maps to --muted-foreground). */
+  --charcoal: #16232b;
+  --body: #545c5f;
+  --muted-text: #61686a;
+  --muted-soft: #8b9092;
+  --line: rgba(22, 35, 43, 0.14);
+  --line-inverse: rgba(243, 239, 228, 0.2);
+  --health-good: var(--green-fill);
+  --health-fair: var(--amber-fill);
+  --health-poor: var(--red-fill);
+  --focus-ring: var(--green-fill);
+  /* Elevation */
+  --shadow-soft: 0 1px 0 rgba(4, 47, 52, 0.04), 0 16px 40px rgba(4, 47, 52, 0.07);
+  --shadow-rest: 0 1px 2px rgba(7, 47, 52, 0.05), 0 10px 26px -10px rgba(7, 47, 52, 0.2), 0 28px 56px -28px rgba(7, 47, 52, 0.24);
+  --shadow-lift: 0 2px 4px rgba(7, 47, 52, 0.06), 0 16px 36px -12px rgba(7, 47, 52, 0.26), 0 40px 70px -30px rgba(7, 47, 52, 0.3);
+  --shadow-gauge: 0 18px 36px rgba(4, 28, 32, 0.45);
+  /* Shape */
+  --radius-card-sm: 18px;
+  --radius-card: 26px;
+  --radius-pill: 999px;
+
+  /* ---- shadcn semantic variables -> design system ---- */
+  --background: var(--cream);
+  --foreground: var(--charcoal);
+  --card-foreground: var(--charcoal);
+  --popover: var(--card);
+  --popover-foreground: var(--charcoal);
+  --primary: var(--ink);
+  --primary-foreground: var(--lime);
+  --secondary: var(--track-soft);
+  --secondary-foreground: var(--charcoal);
+  --muted: var(--track-soft);
+  --muted-foreground: var(--muted-text);
+  --accent: var(--track-soft);
+  --accent-foreground: var(--charcoal);
+  --border: var(--line);
+  --input: var(--line);
+  --ring: var(--focus-ring);
+  --destructive: var(--error);
+  --brand: var(--green-fill);
+  --positive: var(--green);
+  --success: var(--green);
+  --warning: var(--amber-ink);
+  /* Score tiers (the map halos, bars and chips) are the design system's health colours. */
+  --tier-good: var(--health-good);
+  --tier-medium: var(--health-fair);
+  --tier-low: var(--health-poor);
+  --tier-none: var(--pending);
 }
 
 @layer base {
   html {
     color-scheme: light;
-    scrollbar-color: oklch(0.8 0.02 80) transparent;
+    scrollbar-color: var(--muted-soft) transparent;
     scrollbar-width: thin;
   }
+  body {
+    letter-spacing: -0.008em;
+  }
   ::selection {
-    background: oklch(0.52 0.155 40 / 0.2);
-    color: var(--foreground);
+    background: color-mix(in srgb, var(--lime) 60%, transparent);
+    color: var(--charcoal);
   }
   input,
   textarea {
-    caret-color: var(--brand);
+    caret-color: var(--green-fill);
   }
   :focus-visible {
-    outline: 2px solid var(--brand);
+    outline: 2px solid var(--focus-ring);
     outline-offset: 2px;
   }
   .tnum {
     font-variant-numeric: tabular-nums;
   }
+  /* Headings: Inter Tight 400, tight tracking. One serif-italic phrase per heading, via <em>. */
+  .font-display {
+    font-weight: 400;
+    letter-spacing: -0.022em;
+    text-wrap: balance;
+  }
+  .font-display em {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 400;
+    letter-spacing: -0.025em;
+  }
 }
+
+/* ---- Design system text roles (tokens.css). Components opt into roles, not sizes. ---- */
+.type-page-title { font-family: var(--font-sans); font-size: clamp(3.75rem, 6.8vw, 7rem); line-height: 0.9; font-weight: 400; letter-spacing: -0.03em; text-wrap: balance; }
+.type-section-title { font-family: var(--font-sans); font-size: clamp(3rem, 5vw, 5.5rem); line-height: 0.92; font-weight: 400; letter-spacing: -0.028em; text-wrap: balance; }
+.type-card-title { font-family: var(--font-sans); font-size: clamp(1.75rem, 2.4vw, 2.5rem); line-height: 1.02; font-weight: 400; letter-spacing: -0.022em; text-wrap: balance; }
+.type-lead { font-family: var(--font-sans); font-size: clamp(1.125rem, 1.5vw, 1.375rem); line-height: 1.6; font-weight: 400; letter-spacing: -0.008em; max-width: 72ch; text-wrap: pretty; }
+.type-body { font-family: var(--font-sans); font-size: 1rem; line-height: 1.6; font-weight: 400; letter-spacing: -0.008em; max-width: 72ch; text-wrap: pretty; }
+.type-caption { font-family: var(--font-sans); font-size: 0.875rem; line-height: 1.6; font-weight: 400; letter-spacing: 0; }
+.type-eyebrow { font-family: var(--font-sans); font-size: 0.75rem; line-height: 1; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; }
+.type-score { font-family: var(--font-sans); font-size: 4.25rem; line-height: 1; font-weight: 700; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.type-stat { font-family: var(--font-sans); font-size: 2.5rem; line-height: 1; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.type-kpi { font-family: var(--font-sans); font-size: 1.875rem; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.type-engine { font-family: var(--font-sans); font-size: 1.875rem; line-height: 1; font-weight: 700; font-variant-numeric: tabular-nums; }
 
 @keyframes report-rise {
   from {
@@ -644,21 +733,22 @@
   width: 26px;
   height: 26px;
   border-radius: 9999px;
-  background: var(--brand);
-  color: var(--primary-foreground);
+  background: var(--ink);
+  color: var(--lime);
   border: 2px solid var(--card);
   box-shadow: 0 1px 3px rgb(0 0 0 / 0.3), 0 2px 6px rgb(0 0 0 / 0.12);
-  font: 600 12px/1 var(--font-geist-sans), system-ui, sans-serif;
+  font: 600 12px/1 var(--font-inter-tight), system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
 }
 .map-pin--you {
   width: 34px;
   height: 34px;
-  background: var(--foreground);
+  background: var(--charcoal);
+  color: var(--cream);
   font-size: 12px;
 }
 .leaflet-container {
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-family: var(--font-inter-tight), system-ui, sans-serif;
   background: var(--muted);
 }
 .map-tip.leaflet-tooltip {
@@ -729,7 +819,7 @@
   color: var(--foreground);
   border: 1px solid var(--border);
   box-shadow: 0 1px 3px rgb(0 0 0 / 0.14);
-  font: 600 11px/1.35 var(--font-geist-sans), system-ui, sans-serif;
+  font: 600 11px/1.35 var(--font-inter-tight), system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -760,7 +850,7 @@
   background: transparent;
   border: 0;
   color: var(--muted-foreground);
-  font: 500 10px/1 var(--font-geist-sans), system-ui, sans-serif;
+  font: 500 10px/1 var(--font-inter-tight), system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
   text-shadow: 0 0 3px var(--card), 0 0 3px var(--card), 0 0 3px var(--card);
   white-space: nowrap;
@@ -777,7 +867,7 @@
 }
 .leaflet-popup-content {
   margin: 12px 14px;
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-family: var(--font-inter-tight), system-ui, sans-serif;
   font-size: 13px;
   line-height: 1.45;
 }

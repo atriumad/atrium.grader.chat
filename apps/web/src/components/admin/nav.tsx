@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 
+import { Logo } from "@/components/brand/logo"
 import { Button } from "@/components/ui/button"
 
 const ITEMS = [
@@ -22,8 +23,9 @@ export function AdminNav({ email }: { email: string }) {
   const router = useRouter()
   return (
     <nav aria-label="Panel" className="flex shrink-0 flex-col gap-3 py-4 md:sticky md:top-0 md:h-svh md:w-48 md:py-6">
-      <Link href="/admin" className="font-display text-lg leading-none">
-        Atrium <span className="text-sm text-muted-foreground">panel</span>
+      <Link href="/admin" aria-label="atrium panel" className="flex items-baseline gap-2">
+        <Logo variant="wordmark" size={18} />
+        <span className="type-eyebrow text-muted-foreground">Panel</span>
       </Link>
       <ul className="-mx-1 flex gap-1 overflow-x-auto px-1 md:flex-col md:overflow-visible">
         {ITEMS.map((i) => {

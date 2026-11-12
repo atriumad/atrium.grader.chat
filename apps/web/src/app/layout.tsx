@@ -1,18 +1,23 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono, Fraunces } from "next/font/google";
+import { Geist_Mono, Inter_Tight, Instrument_Serif } from "next/font/google";
 import "./globals.css";
 
 import { SITE, siteUrl } from "@/lib/site";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// Design system typography: Inter Tight sets everything; Instrument Serif italic appears only inside
+// a heading's <em>. (The wordmark is the Logo SVG, so Nimora is never loaded.) Mono is only for code.
+const interTight = Inter_Tight({
+  variable: "--font-inter-tight",
   subsets: ["latin"],
+  display: "swap",
 });
 
-const fraunces = Fraunces({
-  variable: "--font-fraunces",
+const instrumentSerif = Instrument_Serif({
+  variable: "--font-instrument-serif",
   subsets: ["latin"],
-  axes: ["opsz"],
+  weight: "400",
+  style: "italic",
+  display: "swap",
 });
 
 const geistMono = Geist_Mono({
@@ -48,7 +53,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} h-full antialiased`}
+      className={`${interTight.variable} ${instrumentSerif.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>

@@ -1,5 +1,6 @@
 import { Suspense } from "react"
 
+import { Logo } from "@/components/brand/logo"
 import { LoginForm } from "@/components/admin/login-form"
 import { missingEnv, SetupGuide } from "@/components/admin/setup-guide"
 import { authConfigured } from "@/lib/supabase/server"
@@ -18,7 +19,7 @@ async function LoginContent({ searchParams }: { searchParams: Promise<{ error?: 
   return (
     <main className="mx-auto flex min-h-svh w-full max-w-sm flex-col justify-center gap-6 px-4">
       <div className="flex flex-col gap-1.5">
-        <span className="font-display text-lg leading-none">Atrium</span>
+        <Logo variant="wordmark" size={22} />
         <h1 className="font-display text-3xl leading-tight">Admin panel</h1>
         <p className="text-sm text-muted-foreground">We sent a sign-in link to your email. It only works with authorized emails.</p>
       </div>

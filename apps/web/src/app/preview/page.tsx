@@ -1,5 +1,6 @@
 "use client"
 
+import { Logo } from "@/components/brand/logo"
 import { Prose } from "@/components/results/prose"
 import { Report } from "@/components/results/report"
 import { Button } from "@/components/ui/button"
@@ -26,7 +27,7 @@ export default function PreviewPage() {
     <main className="flex min-h-svh flex-col bg-background">
       <header className="sticky top-0 z-20 shrink-0 border-b bg-background/90 backdrop-blur">
       <div className="mx-auto flex h-14 w-full max-w-[1400px] items-center justify-between px-4 sm:px-6">
-        <span className="font-display text-lg leading-none">Atrium</span>
+        <Logo variant="wordmark" size={20} />
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm">Ask</Button>
           <Button variant="ghost" size="sm">New analysis</Button>

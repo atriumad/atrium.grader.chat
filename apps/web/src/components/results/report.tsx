@@ -154,23 +154,23 @@ function Hero({ you, total, avg, topGap }: { you: Row; total: number; avg: numbe
           ? `You rank ${ordinal(you.rank)} of ${total} in your area: ${diff} points above your competitors.`
           : `You rank ${ordinal(you.rank)} of ${total} in your area, level with your competitors.`
   return (
-    <div className="reveal-rise flex flex-wrap items-center gap-x-7 gap-y-5 rounded-2xl bg-foreground p-5 text-primary-foreground">
+    <div className="reveal-rise flex flex-wrap items-center gap-x-7 gap-y-5 rounded-2xl bg-ink p-5 text-cream">
       <ScoreRing score={you.score} tier={you.tier} />
       <div className="flex min-w-0 flex-1 basis-56 flex-col gap-3">
-        <p className="flex flex-wrap items-center gap-2 text-sm text-primary-foreground/70">
+        <p className="flex flex-wrap items-center gap-2 text-sm text-cream/70">
           Atrium Score
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-primary-foreground/25 px-2.5 py-0.5 text-xs font-medium text-primary-foreground">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-cream/25 px-2.5 py-0.5 text-xs font-medium text-cream">
             <TierDot tier={you.tier} className="size-2" />
             {TIER_LABEL[you.tier]}
           </span>
         </p>
         <h3 className="font-display text-xl leading-tight text-balance sm:text-2xl">{verdict}</h3>
         {topGap ? (
-          <p className="text-sm text-primary-foreground/80">
-            What holds you back most: <strong className="font-medium text-primary-foreground">{topGap.label}</strong> (−{topGap.behind} pts).
+          <p className="text-sm text-cream/80">
+            What holds you back most: <strong className="font-medium text-lime">{topGap.label}</strong> (−{topGap.behind} pts).
           </p>
         ) : null}
-        <p className="text-xs text-primary-foreground/60 text-pretty">
+        <p className="text-xs text-cream/60 text-pretty">
           Confidence: {CONFIDENCE_LABEL[you.confidence.level]}
           {you.confidence.level !== "high" && you.missing.length > 0
             ? ` · provisional: missing data for ${you.missing.map((k) => PART_LABEL[k].toLowerCase()).join(", ")}`
@@ -198,7 +198,7 @@ function NextStep({ gaps, ahead, onAsk }: { gaps: Gap[]; ahead: boolean; onAsk: 
         </p>
       </div>
       <div className="flex shrink-0 flex-wrap items-center gap-x-5 gap-y-2">
-        <Button size="lg" className="bg-brand text-primary-foreground hover:bg-brand/90" onClick={() => onAsk("I want to book a meeting")}>
+        <Button size="lg" className="bg-amber text-charcoal hover:bg-amber-fill" onClick={() => onAsk("I want to book a meeting")}>
           Book a meeting
         </Button>
         <button type="button" className="text-sm text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline" onClick={() => onAsk("What should I do first?")}>
@@ -402,14 +402,14 @@ export function Report({
                       className={`row-in border-t first:border-t-0 align-middle transition-colors ${active === r.key ? "bg-secondary" : r.isYou ? "bg-secondary/60" : ""}`}
                     >
                       <td className="w-12 py-2.5 pl-4">
-                        <span className={`grid size-6 place-items-center rounded-full text-xs font-semibold tnum ${r.isYou ? "bg-foreground text-primary-foreground" : "bg-brand text-primary-foreground"}`}>
+                        <span className={`grid size-6 place-items-center rounded-full text-xs font-semibold tnum ${r.isYou ? "bg-charcoal text-cream" : "bg-ink text-lime"}`}>
                           {r.rank}
                         </span>
                       </td>
                       <th scope="row" className="px-2 py-2.5 text-left font-normal">
                         <span className="flex flex-wrap items-center gap-x-2">
                           <span className="font-medium">{r.name}</span>
-                          {r.isYou ? <span className="rounded-full bg-foreground px-2 py-0.5 text-[0.6875rem] text-primary-foreground">You</span> : null}
+                          {r.isYou ? <span className="rounded-full bg-charcoal px-2 py-0.5 text-[0.6875rem] text-cream">You</span> : null}
                         </span>
                       </th>
                       <td className="w-40 px-3 py-2.5 pr-4">
