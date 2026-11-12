@@ -14,7 +14,7 @@ import { Prose } from "@/components/results/prose"
 import { Report } from "@/components/results/report"
 import { Scan, type ScanStep } from "@/components/results/scan"
 import { Logo } from "@/components/brand/logo"
-import { HeroArt } from "@/components/landing/hero-art"
+import { OrbitField } from "@/components/landing/orbit-field"
 import { ScrollCta } from "@/components/landing/scroll-cta"
 import { Bubble, BubbleContent } from "@/components/ui/bubble"
 import { Button } from "@/components/ui/button"
@@ -402,31 +402,34 @@ export function Home({ landing, proof }: { landing: React.ReactNode; proof?: Rea
 
       {empty ? (
         <>
-          <section id="search" aria-labelledby="hero-h" className="mx-auto grid w-full max-w-[1200px] items-center gap-x-12 gap-y-12 px-4 pt-[clamp(2.5rem,8vh,5.5rem)] pb-[clamp(3rem,9vh,6rem)] sm:px-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
-            <div className="flex flex-col">
-              <p className="type-eyebrow text-muted-foreground">The free restaurant score</p>
-              <h1 id="hero-h" className="font-display mt-5 text-[clamp(2.75rem,6.6vw,5.5rem)] leading-[0.95]">
-                How does your restaurant stack up <em>against the competition?</em>
-              </h1>
-              <p className="type-lead mt-6 text-muted-foreground">
-                Type your restaurant and pick it from the list. In about 40 seconds you get a score, a map of who is around you and what to fix first.
-              </p>
-              <div className="mt-8 w-full max-w-xl">
-                <SearchForm
-                  value={draft}
-                  onValueChange={setDraft}
-                  onSubmit={(q) => void run(q)}
-                  onPick={(p) => void run(p.name, { placeId: p.placeId, label: `${p.name} · ${p.detail}` })}
-                  disabled={busy}
-                />
-              </div>
-              <ul className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
-                <li>Free, no sign-up</li>
-                <li>Real Google and social data</li>
-                {proof}
-              </ul>
+          <section
+            id="search"
+            aria-labelledby="hero-h"
+            className="relative isolate flex min-h-[calc(100svh-3.5rem)] flex-col items-center justify-center overflow-hidden px-4 py-[clamp(3rem,9vh,6rem)] text-center sm:px-6 [&:has(input:focus)_.orbit-pin]:scale-[1.12]"
+          >
+            <OrbitField />
+            <div aria-hidden="true" className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_52%_46%_at_50%_50%,var(--cream)_38%,transparent_100%)]" />
+            <p className="type-eyebrow text-muted-foreground">The free restaurant score</p>
+            <h1 id="hero-h" className="font-display mx-auto mt-5 max-w-[18ch] text-[clamp(2.75rem,7vw,6rem)] leading-[0.95]">
+              How does your restaurant stack up <em>against the competition?</em>
+            </h1>
+            <p className="type-lead mx-auto mt-6 max-w-[52ch] text-muted-foreground">
+              Type your restaurant and pick it from the list. In about 40 seconds you get a score, a map of who is around you and what to fix first.
+            </p>
+            <div className="mx-auto mt-8 w-full max-w-xl text-left">
+              <SearchForm
+                value={draft}
+                onValueChange={setDraft}
+                onSubmit={(q) => void run(q)}
+                onPick={(p) => void run(p.name, { placeId: p.placeId, label: `${p.name} · ${p.detail}` })}
+                disabled={busy}
+              />
             </div>
-            <HeroArt />
+            <ul className="mt-6 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
+              <li>Free, no sign-up</li>
+              <li>Real Google and social data</li>
+              {proof}
+            </ul>
           </section>
           {landing}
         </>
