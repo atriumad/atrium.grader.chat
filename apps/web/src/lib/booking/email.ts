@@ -101,18 +101,24 @@ export const notifyList = (raw = process.env.BOOKING_NOTIFY_EMAILS): string[] =>
     .map((e) => e.trim())
     .filter((e) => /^[^\s@,<>]+@[^\s@,<>]+\.[^\s@,<>]{2,}$/.test(e))
 
+// Hosting dashboards keep quotes and stray spaces that .env files strip, so clean them here.
+export function fromAddress(raw = process.env.BOOKING_FROM_EMAIL): string {
+  const v = (raw ?? "").trim().replace(/^["']+|["']+$/g, "").trim()
+  return /^[^<>\r\n]*<[^\s@<>]+@[^\s@<>]+\.[^\s@<>]{2,}>$|^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]{2,}$/.test(v) ? v : ""
+}
+
 export function emailsConfigured(): boolean {
-  return !!process.env.RESEND_API_KEY && !!process.env.BOOKING_FROM_EMAIL
+  return !!process.env.RESEND_API_KEY?.trim() && !!fromAddress()
 }
 
 // Sends both emails. Never throws; returns what happened so the caller can log it.
 export async function sendBookingEmails(d: BookingEmailData): Promise<{ visitor: boolean; ops: boolean; error?: string }> {
-  if (!emailsConfigured()) return { visitor: false, ops: false, error: "Email is not configured (RESEND_API_KEY / BOOKING_FROM_EMAIL)." }
+  if (!emailsConfigured()) return { visitor: false, ops: false, error: "Email is not configured: RESEND_API_KEY is missing or BOOKING_FROM_EMAIL is not a valid address (use: Name <email@domain.com>)." }
   const cfg = bookingConfig()
-  const from = process.env.BOOKING_FROM_EMAIL!
+  const from = fromAddress()
   const fromAddr = from.match(/<([^>]+)>/)?.[1] ?? from
   const when = formatSlot(new Date(d.start), cfg.timezone)
-  const resend = new Resend(process.env.RESEND_API_KEY)
+  const resend = new Resend(process.env.RESEND_API_KEY!.trim())
   const ics = Buffer.from(buildIcs(d, fromAddr)).toString("base64")
 
   const v = visitorEmail(d, when, cfg.timezone)
