@@ -58,7 +58,7 @@ export function toEntities(result: AgentResult): AgentResearch | null {
     }
   })
   const all = Array.isArray(result.facts.competitors) ? (result.facts.competitors as NonNullable<Entity["place"]>[]) : []
-  const rest: Entity[] = all.filter((p) => !readIds.has(p.id)).map((p) => ({ name: p.name, place: p, instagram: null, instagramNote: "No analizado" }))
+  const rest: Entity[] = all.filter((p) => !readIds.has(p.id)).map((p) => ({ name: p.name, place: p, instagram: null, instagramNote: "Not analyzed" }))
 
   const g = rec(result.facts.competitorGrouping)
   const grouped: Grouped = { competitors: [], merged: Number(g.merged ?? 0), sameBrandAsBusiness: Number(g.sameBrandAsBusiness ?? 0) }

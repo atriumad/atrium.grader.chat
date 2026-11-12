@@ -11,7 +11,7 @@ const registry = defaultRegistry()
 const active = config.callers.filter((c) => c.active)
 for (const c of active) if (!process.env[c.keyHashEnv]) console.warn(`caller ${c.id}: ${c.keyHashEnv} is not set, its key cannot authenticate`)
 
-const port = Number(process.env.AGENT_PORT ?? 4100)
+const port = Number(process.env.AGENT_PORT ?? process.env.PORT ?? 4100)
 createAgentServer({ config, registry, env: process.env }).listen(port, () => {
   console.log(`agent listening on :${port} · callers: ${active.map((c) => c.id).join(", ") || "none"}`)
 })

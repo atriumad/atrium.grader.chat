@@ -74,3 +74,43 @@ export function logLookup(l: LookupLog): void {
     })
   ).catch(() => {})
 }
+
+export type BookingRow = {
+  start: string
+  end: string
+  provider: "google" | "mock"
+  eventId: string | null
+  meetLink: string | null
+  name: string
+  email: string
+  phone: string
+  businessName: string
+  score: number | null
+  notes: string
+  emails?: { visitor: boolean; ops: boolean; error?: string }
+}
+
+// Awaited (serverless would cut a floating promise) but never throws: the meeting already exists.
+export async function saveBooking(b: BookingRow): Promise<void> {
+  if (!supabaseConfigured()) return
+  try {
+    await db().from("bookings").insert({
+      start_at: b.start,
+      end_at: b.end,
+      provider: b.provider,
+      calendar_event_id: b.eventId,
+      meet_link: b.meetLink,
+      name: b.name,
+      email: b.email,
+      phone: b.phone || null,
+      business_name: b.businessName,
+      score: b.score,
+      notes: b.notes || null,
+      email_visitor: b.emails?.visitor ?? null,
+      email_ops: b.emails?.ops ?? null,
+      email_error: b.emails?.error?.slice(0, 500) ?? null,
+    })
+  } catch {
+    // Logging must never break a booking.
+  }
+}

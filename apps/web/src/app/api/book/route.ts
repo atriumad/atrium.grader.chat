@@ -26,7 +26,7 @@ export async function POST(req: Request) {
       businessName: String(b.businessName ?? ""),
       score: typeof b.score === "number" ? b.score : null,
     })
-    logEvent("booking", { mock: r.mock })
+    logEvent("booking", { mock: r.mock, email_visitor: r.emails?.visitor ?? null, email_ops: r.emails?.ops ?? null, email_error: r.emails?.error ?? null })
     return Response.json({ ok: true, label: r.label, mock: r.mock, meetLink: r.meetLink ?? null })
   } catch (e) {
     if (e instanceof BookingError) {
