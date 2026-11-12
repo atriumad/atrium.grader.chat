@@ -14,7 +14,7 @@ import { Prose } from "@/components/results/prose"
 import { Report } from "@/components/results/report"
 import { Scan, type ScanStep } from "@/components/results/scan"
 import { Logo } from "@/components/brand/logo"
-import { OrbitField } from "@/components/landing/orbit-field"
+import { Shot } from "@/components/landing/shot"
 import { ScrollCta } from "@/components/landing/scroll-cta"
 import { Bubble, BubbleContent } from "@/components/ui/bubble"
 import { Button } from "@/components/ui/button"
@@ -402,21 +402,15 @@ export function Home({ landing, proof }: { landing: React.ReactNode; proof?: Rea
 
       {empty ? (
         <>
-          <section
-            id="search"
-            aria-labelledby="hero-h"
-            className="relative isolate flex min-h-[calc(100svh-3.5rem)] flex-col items-center justify-center overflow-hidden px-4 py-[clamp(3rem,9vh,6rem)] text-center sm:px-6 [&:has(input:focus)_.orbit-pin]:scale-[1.12]"
-          >
-            <OrbitField />
-            <div aria-hidden="true" className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_52%_46%_at_50%_50%,var(--cream)_38%,transparent_100%)]" />
+          <section id="search" aria-labelledby="hero-h" className="mx-auto flex w-full max-w-[1000px] flex-col items-center px-4 pt-[clamp(3rem,8vh,5.5rem)] text-center sm:px-6">
             <p className="type-eyebrow text-muted-foreground">The free restaurant score</p>
-            <h1 id="hero-h" className="font-display mx-auto mt-5 max-w-[18ch] text-[clamp(2.75rem,7vw,6rem)] leading-[0.95]">
+            <h1 id="hero-h" className="font-display mx-auto mt-4 max-w-[20ch] text-[clamp(2.5rem,5.8vw,4.75rem)] leading-[0.97]">
               How does your restaurant stack up <em>against the competition?</em>
             </h1>
-            <p className="type-lead mx-auto mt-6 max-w-[52ch] text-muted-foreground">
-              Type your restaurant and pick it from the list. In about 40 seconds you get a score, a map of who is around you and what to fix first.
+            <p className="type-lead mx-auto mt-5 max-w-[50ch] text-muted-foreground">
+              Pick your restaurant. In about 40 seconds you get a score, a map of who is around you and what to fix first.
             </p>
-            <div className="mx-auto mt-8 w-full max-w-xl text-left">
+            <div className="mx-auto mt-7 w-full max-w-xl text-left">
               <SearchForm
                 value={draft}
                 onValueChange={setDraft}
@@ -425,12 +419,15 @@ export function Home({ landing, proof }: { landing: React.ReactNode; proof?: Rea
                 disabled={busy}
               />
             </div>
-            <ul className="mt-6 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
+            <ul className="mt-5 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
               <li>Free, no sign-up</li>
               <li>Real Google and social data</li>
               {proof}
             </ul>
           </section>
+          <div className="mt-12 px-4 sm:px-6">
+            <Shot shot="dashboard" fade priority alt="The Atrium report for a sample restaurant: score, competitors, map and signals" />
+          </div>
           {landing}
         </>
       ) : report ? (

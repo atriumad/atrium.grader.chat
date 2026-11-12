@@ -3,112 +3,117 @@ import { HomeJsonLd } from "@/components/seo/json-ld"
 import { FAQ } from "@/lib/site"
 
 import { FocusSearchButton } from "./focus-search"
-import { HeadToHead } from "./head-to-head"
-import { OrbitField } from "./orbit-field"
-import { ReportPeek } from "./report-peek"
+import Image from "next/image"
+
+import { Shot } from "./shot"
 import { Reveal } from "./reveal"
-import { SignalExplorer } from "./signal-explorer"
-import { StepsTimeline } from "./steps-timeline"
 
-// The long, editorial part of the home page, under the search box. Everything is centred, in
-// reading-width columns. Server-rendered: it is what search engines read, so it stays factual.
+// The part of the home page under the search box. One idea per section, everything centred, one
+// image. Server-rendered: it is what search engines read, so it stays factual.
 
-const H2 = "font-display mx-auto max-w-[20ch] text-[clamp(2.5rem,5.6vw,4.75rem)] leading-[0.98]"
-const SECTION = "mx-auto flex w-full max-w-[1100px] flex-col items-center px-4 py-[clamp(4.5rem,11vw,8rem)] text-center sm:px-6"
+const H2 = "font-display mx-auto max-w-[20ch] text-[clamp(2.25rem,5vw,4rem)] leading-[1]"
+const SECTION = "mx-auto flex w-full max-w-[1000px] flex-col items-center px-4 py-[clamp(4rem,10vw,7rem)] text-center sm:px-6"
 
-function Chapter({ n, label }: { n: string; label: string }) {
-  return (
-    <p className="type-eyebrow flex flex-col items-center gap-3 text-muted-foreground">
-      <span className="font-serif text-3xl leading-none tracking-normal normal-case text-charcoal tnum">{n}</span>
-      {label}
-    </p>
-  )
-}
+const SIGNALS = [
+  { name: "Engagement", d: "Do people react when you post?" },
+  { name: "Reputation", d: "What do guests say on Google?" },
+  { name: "Activity", d: "Are you showing up often?" },
+  { name: "Audience", d: "How many people can you reach?" },
+  { name: "Presence", d: "Where are you active?" },
+]
+
+const STEPS = [
+  { t: "Find your restaurant", d: "Type its name and pick it from the Google Maps suggestions." },
+  { t: "We read the public data", d: "Your listing, the places around you and everyone's social profiles." },
+  { t: "Get your score and a plan", d: "A map of the competition, a written analysis and the actions that matter most." },
+]
 
 export function Landing() {
   return (
     <>
       <HomeJsonLd />
 
-      {/* 01 · the problem */}
-      <section aria-labelledby="problem-h" className="border-t">
+      <section aria-labelledby="problem-h">
         <div className={SECTION}>
           <Reveal className="flex flex-col items-center gap-6">
-            <Chapter n="01" label="The problem" />
-            <h2 id="problem-h" className={H2}>
-              Your guests compare you <em>before they walk in.</em>
+            <h2 id="problem-h" className="font-display mx-auto max-w-[22ch] text-[clamp(2.25rem,5vw,4rem)] leading-[1]">
+              <span className="text-muted-foreground">You know your restaurant.</span>
+              <br />
+              Now know <em>how it compares.</em>
             </h2>
-            <p className="type-lead mx-auto text-body">They check your Google stars, scroll your Instagram and look at the place next door. If the competition looks livelier, that is where dinner happens.</p>
-          </Reveal>
-          <HeadToHead />
-          <Reveal className="mt-10">
-            <p className="type-body mx-auto text-muted-foreground">You rarely see it happen. The Grader puts you side by side with the restaurants around you, on the same rules, so you can see where you win and where you quietly lose.</p>
+            <p className="type-lead mx-auto text-body">Your guests check your Google stars, scroll your Instagram and look at the place next door before they ever walk in. The Grader does that comparison for you.</p>
           </Reveal>
         </div>
       </section>
 
-      {/* 02 · what we measure */}
       <section aria-labelledby="measure-h" className="bg-off-white">
         <div className={SECTION}>
           <Reveal className="flex flex-col items-center gap-6">
-            <Chapter n="02" label="What we measure" />
+            <p className="type-eyebrow text-muted-foreground">What we measure</p>
             <h2 id="measure-h" className={H2}>
               Five signals. <em>One honest score.</em>
             </h2>
-            <p className="type-lead mx-auto text-body">Every restaurant, yours and the competition, is scored with the same rules. When something cannot be read, the report says so instead of guessing.</p>
           </Reveal>
-          <Reveal className="w-full" delay={80}>
-            <SignalExplorer />
-          </Reveal>
-        </div>
-      </section>
-
-      {/* 03 · the report */}
-      <section aria-labelledby="report-h">
-        <div className={SECTION}>
-          <Reveal className="flex flex-col items-center gap-6">
-            <Chapter n="03" label="What you get" />
-            <h2 id="report-h" className={H2}>
-              A score you can read <em>in ten seconds.</em>
-            </h2>
-            <p className="type-lead mx-auto text-body">Where you stand, who is ahead and what is holding you back, in that order. Then a written analysis and a chat to go deeper.</p>
-          </Reveal>
-          <div className="mt-14 w-full max-w-5xl text-left">
-            <ReportPeek />
-          </div>
-          <Reveal className="mt-12">
-            <ul className="mx-auto flex max-w-3xl flex-wrap justify-center gap-2.5">
-              {["Score vs. nearby competitors", "A map with a halo for each score", "A written analysis", "The 3 actions that matter most", "An assistant for your questions", "Book a 30-minute call"].map((t) => (
-                <li key={t} className="rounded-full border bg-card px-4 py-2 text-sm text-body">{t}</li>
+          <Reveal className="mt-12 w-full">
+            <ul className="grid gap-x-8 gap-y-8 sm:grid-cols-5">
+              {SIGNALS.map((s) => (
+                <li key={s.name} className="flex flex-col items-center gap-2">
+                  <span aria-hidden="true" className="size-2 rounded-full bg-green-fill" />
+                  <h3 className="text-lg font-medium tracking-tight text-charcoal">{s.name}</h3>
+                  <p className="text-sm text-muted-foreground">{s.d}</p>
+                </li>
               ))}
             </ul>
           </Reveal>
         </div>
       </section>
 
-      {/* 04 · how it works */}
+      <section aria-labelledby="plan-h">
+        <div className={SECTION}>
+          <Reveal className="flex flex-col items-center gap-6">
+            <p className="type-eyebrow text-muted-foreground">What you get</p>
+            <h2 id="plan-h" className={H2}>
+              A plan, <em>not just a number.</em>
+            </h2>
+            <p className="type-lead mx-auto text-body">A written analysis, the three actions that matter most and a direct line to the team.</p>
+          </Reveal>
+          <Reveal className="mt-12 w-full" delay={80}>
+            <Shot shot="plan" alt="The written analysis of the report with the three actions that matter most and a button to book a meeting" />
+          </Reveal>
+        </div>
+      </section>
+
       <section aria-labelledby="how-h" className="bg-off-white">
         <div className={SECTION}>
           <Reveal className="flex flex-col items-center gap-6">
-            <Chapter n="04" label="How it works" />
+            <p className="type-eyebrow text-muted-foreground">How it works</p>
             <h2 id="how-h" className={H2}>
               About 40 seconds, <em>start to finish.</em>
             </h2>
           </Reveal>
-          <StepsTimeline />
+          <Reveal className="mt-12 w-full">
+            <ol className="grid gap-x-10 gap-y-10 md:grid-cols-3">
+              {STEPS.map((s, i) => (
+                <li key={s.t} className="flex flex-col items-center gap-3">
+                  <span className="font-serif text-6xl leading-none text-charcoal tnum">{i + 1}</span>
+                  <h3 className="text-xl font-medium tracking-tight text-charcoal">{s.t}</h3>
+                  <p className="type-body text-muted-foreground">{s.d}</p>
+                </li>
+              ))}
+            </ol>
+          </Reveal>
         </div>
       </section>
 
-      {/* 05 · FAQ */}
       <section aria-labelledby="faq-h">
         <div className={SECTION}>
           <Reveal className="flex flex-col items-center gap-6">
-            <Chapter n="05" label="Questions" />
+            <p className="type-eyebrow text-muted-foreground">Questions</p>
             <h2 id="faq-h" className={H2}>
               Before you <em>try it.</em>
             </h2>
           </Reveal>
-          <Reveal delay={100} className="mt-12 w-full max-w-2xl divide-y border-y text-left">
+          <Reveal className="mt-12 w-full max-w-2xl divide-y border-y text-left">
             {FAQ.map((f) => (
               <details key={f.q} className="group py-5">
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-6 text-lg font-medium tracking-tight text-charcoal marker:hidden [&::-webkit-details-marker]:hidden">
@@ -122,26 +127,24 @@ export function Landing() {
         </div>
       </section>
 
-      {/* closing band */}
-      <section aria-labelledby="close-h" className="relative isolate overflow-hidden bg-ink text-cream">
-        <OrbitField on="ink" />
-        <div aria-hidden="true" className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_50%_55%_at_50%_50%,var(--ink)_40%,transparent_100%)]" />
-        <div className="mx-auto flex w-full max-w-[1100px] flex-col items-center gap-8 px-4 py-[clamp(6rem,14vw,10rem)] text-center sm:px-6">
-          <Reveal className="flex flex-col items-center gap-5">
-            <p className="type-eyebrow text-lime">Free · no sign-up</p>
-            <h2 id="close-h" className="font-display mx-auto max-w-[14ch] text-[clamp(2.75rem,6.4vw,5.5rem)] leading-[0.95]">
-              See where you stand <em>today.</em>
-            </h2>
-          </Reveal>
-          <Reveal delay={100}>
-            <FocusSearchButton className="h-12 bg-lime px-7 text-base text-charcoal hover:bg-lime/90">Get my free score</FocusSearchButton>
-          </Reveal>
+      <section aria-labelledby="close-h" className="px-4 pb-4 sm:px-6">
+        <div className="relative isolate mx-auto w-full max-w-[1100px] overflow-hidden rounded-[var(--radius-card)] bg-ink text-cream">
+          <Image src="/landing/dusk.jpg" alt="" fill sizes="(min-width: 1100px) 1100px, 100vw" className="-z-10 object-cover" />
+          <div aria-hidden="true" className="absolute inset-0 -z-10 bg-[linear-gradient(to_bottom,color-mix(in_srgb,var(--ink)_62%,transparent),color-mix(in_srgb,var(--ink)_88%,transparent))]" />
+          <div className="flex flex-col items-center px-6 py-[clamp(5rem,12vw,9rem)] text-center">
+            <Reveal className="flex flex-col items-center gap-7">
+              <h2 id="close-h" className="font-display mx-auto max-w-[14ch] text-[clamp(2.75rem,6.4vw,5.25rem)] leading-[0.97]">
+                See where you stand <em>today.</em>
+              </h2>
+              <FocusSearchButton className="h-12 rounded-full bg-lime px-7 text-base text-charcoal hover:bg-lime/90">Get my free score</FocusSearchButton>
+            </Reveal>
+          </div>
         </div>
       </section>
 
-      <footer className="bg-ink text-cream/70">
-        <div className="mx-auto flex w-full max-w-[1100px] flex-col items-center gap-3 border-t border-[var(--line-inverse)] px-4 py-8 text-center text-xs sm:px-6">
-          <Logo variant="wordmark" size={18} tone="cream" />
+      <footer className="text-muted-foreground">
+        <div className="mx-auto flex w-full max-w-[1000px] flex-col items-center gap-3 px-4 py-10 text-center text-xs sm:px-6">
+          <Logo variant="wordmark" size={18} />
           <p>Built on public Google Maps and social profile data.</p>
         </div>
       </footer>

@@ -594,6 +594,7 @@
   }
   body {
     letter-spacing: -0.008em;
+    overflow-x: clip;
   }
   ::selection {
     background: color-mix(in srgb, var(--lime) 60%, transparent);
@@ -644,17 +645,11 @@
   transition: opacity 700ms cubic-bezier(0.22, 0.61, 0.36, 1) var(--d, 0ms), transform 700ms cubic-bezier(0.22, 0.61, 0.36, 1) var(--d, 0ms);
 }
 .reveal-on-scroll.is-in { opacity: 1; transform: none; }
-@keyframes orbit { to { transform: rotate(360deg); } }
-.orbit { animation: orbit var(--dur, 90s) linear infinite; }
-.orbit-counter { animation: orbit var(--dur, 90s) linear infinite reverse; }
-@keyframes panel-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-.panel-in { animation: panel-in 380ms cubic-bezier(0.16, 1, 0.3, 1) both; }
 @keyframes halo-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-9px); } }
 .halo-float { animation: halo-float 6s ease-in-out var(--d, 0s) infinite; }
 @media (prefers-reduced-motion: reduce) {
   .reveal-on-scroll { opacity: 1; transform: none; transition: none; }
   .halo-float { animation: none; }
-  .orbit, .orbit-counter, .panel-in { animation: none; }
 }
 
 @keyframes report-rise {
@@ -902,3 +897,6 @@
   font-size: 13px;
   line-height: 1.45;
 }
+
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }

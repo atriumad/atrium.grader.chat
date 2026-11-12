@@ -102,13 +102,13 @@ export function SearchForm({
         if (items[0] && searched === query) choose(items[0])
         else onSubmit(query)
       }}
-      className="flex w-full flex-col gap-2 sm:flex-row"
+      className="relative flex w-full items-center gap-2 rounded-full border bg-card p-1.5 shadow-[var(--shadow-soft)] transition-shadow focus-within:shadow-[var(--shadow-rest)] focus-within:ring-3 focus-within:ring-focus-ring/40"
     >
       <label htmlFor="business-query" className="sr-only">
         Your restaurant name
       </label>
-      <div className="relative flex-1">
-        <IconSearch className="pointer-events-none absolute start-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+      <div className="min-w-0 flex-1">
+        <IconSearch className="pointer-events-none absolute start-5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
         <input
           id="business-query"
           type="text"
@@ -129,13 +129,13 @@ export function SearchForm({
           autoComplete="off"
           enterKeyHint="search"
           placeholder="Your restaurant name"
-          className="h-12 w-full rounded-xl border bg-card ps-10 pe-4 text-touch text-foreground outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-focus-ring"
+          className="h-11 w-full rounded-full border-0 bg-transparent ps-11 pe-3 text-touch text-foreground outline-none placeholder:text-muted-foreground"
         />
         {showList && (items.length > 0 || empty) ? (
           <ul
             id={listId}
             role="listbox"
-            className="absolute inset-x-0 top-[calc(100%+0.375rem)] z-30 overflow-hidden rounded-xl border bg-card text-left shadow-lg"
+            className="absolute inset-x-0 top-[calc(100%+0.5rem)] z-30 overflow-hidden rounded-2xl border bg-card text-left shadow-lg"
           >
             {items.map((p, i) => (
               <li
@@ -166,7 +166,7 @@ export function SearchForm({
           </ul>
         ) : null}
       </div>
-      <Button type="submit" size="lg" className="h-12 rounded-xl px-6 text-base" disabled={disabled || !query}>
+      <Button type="submit" size="lg" className="h-11 rounded-full px-6 text-base" disabled={disabled || !query}>
         Analyze
       </Button>
     </form>
