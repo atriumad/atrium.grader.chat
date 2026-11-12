@@ -13,6 +13,8 @@ import {
 import { Prose } from "@/components/results/prose"
 import { Report } from "@/components/results/report"
 import { Scan, type ScanStep } from "@/components/results/scan"
+import { HomeContent } from "@/components/seo/home-content"
+import { HomeJsonLd } from "@/components/seo/json-ld"
 import { Bubble, BubbleContent } from "@/components/ui/bubble"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetBody, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet"
@@ -398,7 +400,9 @@ export default function Page() {
       </header>
 
       {empty ? (
-        <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-center justify-center gap-8 px-4 pb-20 text-center sm:px-6">
+        <>
+        <HomeJsonLd />
+        <div className="mx-auto flex min-h-[70svh] w-full max-w-2xl flex-col items-center justify-center gap-8 px-4 pb-20 text-center sm:px-6">
           <div className="flex flex-col items-center gap-3">
             <h1 className="font-display text-4xl leading-[1.08] text-balance sm:text-5xl">
               How does your business stack up against the competition?
@@ -417,6 +421,8 @@ export default function Page() {
             />
           </div>
         </div>
+        <HomeContent />
+        </>
       ) : report ? (
         <div className="mx-auto w-full max-w-[1400px] flex-1 px-4 pt-6 pb-16 sm:px-6" aria-busy={busy}>
           {turnBody(report)}

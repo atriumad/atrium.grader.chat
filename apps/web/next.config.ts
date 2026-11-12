@@ -17,8 +17,9 @@ const nextConfig: NextConfig = {
           { key: "Content-Security-Policy", value: "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'" },
         ],
       },
-      { source: "/admin/:path*", headers: [{ key: "Cache-Control", value: "no-store" }] },
-      { source: "/api/:path*", headers: [{ key: "Cache-Control", value: "no-store" }] },
+      { source: "/admin/:path*", headers: [{ key: "Cache-Control", value: "no-store" }, { key: "X-Robots-Tag", value: "noindex, nofollow" }] },
+      { source: "/api/:path*", headers: [{ key: "Cache-Control", value: "no-store" }, { key: "X-Robots-Tag", value: "noindex, nofollow" }] },
+      { source: "/preview/:path*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] },
     ]
   },
   cacheComponents: true,
