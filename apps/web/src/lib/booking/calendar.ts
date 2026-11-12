@@ -21,6 +21,8 @@ export interface CalendarProvider {
   kind: "mock" | "google"
   busy(from: Date, to: Date): Promise<Interval[]>
   create(req: BookingRequest, cfg: BookingConfig): Promise<CreatedBooking>
+  /** Removes the event so the slot is free again. Already gone counts as done. */
+  cancel(eventId: string): Promise<void>
 }
 
 // ---------------------------------------------------------------------------
@@ -51,6 +53,10 @@ export const mockProvider: CalendarProvider = {
     await fs.mkdir(path.dirname(MOCK_FILE), { recursive: true })
     await fs.writeFile(MOCK_FILE, JSON.stringify([...rows, row], null, 2))
     return { id: row.id, mock: true }
+  },
+  async cancel(eventId) {
+    const rows = await readMock()
+    await fs.writeFile(MOCK_FILE, JSON.stringify(rows.filter((r) => r.id !== eventId), null, 2))
   },
 }
 
@@ -106,12 +112,12 @@ export const googleProvider: CalendarProvider = {
       .filter(Boolean)
       .join("\n")
     const res = await fetch(
-      `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId())}/events?conferenceDataVersion=1&sendUpdates=all`,
+      `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId())}/events?conferenceDataVersion=1&sendUpdates=none`,
       {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          summary: `Consulta Atrium · ${req.businessName}`,
+          summary: `Atrium consultation · ${req.businessName}`,
           description,
           start: { dateTime: req.start, timeZone: cfg.timezone },
           end: { dateTime: req.end, timeZone: cfg.timezone },
@@ -125,5 +131,14 @@ export const googleProvider: CalendarProvider = {
     if (!res.ok) throw new Error(`Google Calendar ${res.status} while creating the event.`)
     const json = (await res.json()) as { id: string; hangoutLink?: string }
     return { id: json.id, meetLink: json.hangoutLink, mock: false }
+  },
+  async cancel(eventId) {
+    const token = await googleToken()
+    const res = await fetch(
+      `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId())}/events/${encodeURIComponent(eventId)}?sendUpdates=none`,
+      { method: "DELETE", headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(15_000) }
+    )
+    // 404 / 410: it was already deleted in Google Calendar, which is what we wanted.
+    if (!res.ok && res.status !== 404 && res.status !== 410) throw new Error(`Google Calendar ${res.status} while cancelling the event.`)
   },
 }

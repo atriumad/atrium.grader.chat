@@ -1,5 +1,7 @@
 import { googleProvider, mockProvider, type BookingRequest, type CalendarProvider, type CreatedBooking } from "./calendar"
 import { bookingConfig, type BookingConfig } from "./config"
+import { sendBookingEmails } from "./email"
+import { saveBooking } from "@/lib/admin/log"
 import { buildSlots, pickSpread, type Slot } from "./slots"
 import { formatSlot } from "./tz"
 
@@ -81,7 +83,9 @@ export function validateInput(input: BookingInput): { ok: true; value: Required<
 
 let lock: Promise<unknown> = Promise.resolve()
 
-export async function createBooking(input: BookingInput): Promise<CreatedBooking & { label: string }> {
+export type BookingResult = CreatedBooking & { label: string; emails?: { visitor: boolean; ops: boolean; error?: string } }
+
+export async function createBooking(input: BookingInput): Promise<BookingResult> {
   const cfg = bookingConfig()
   const provider = getProvider(cfg)
   if (!provider) throw new BookingError("The calendar is not configured.", "not_configured")
@@ -96,7 +100,25 @@ export async function createBooking(input: BookingInput): Promise<CreatedBooking
     const req: BookingRequest = { ...v.value, end: slot.end }
     try {
       const created = await provider.create(req, cfg)
-      return { ...created, label: formatSlot(new Date(slot.start), cfg.timezone) }
+      // The meeting exists now: emails are best effort and must not turn it into an error.
+      const emails = created.mock
+        ? undefined
+        : await sendBookingEmails({ ...v.value, id: created.id, end: slot.end, meetLink: created.meetLink })
+      await saveBooking({
+        start: slot.start,
+        end: slot.end,
+        provider: provider.kind,
+        eventId: created.id,
+        meetLink: created.meetLink ?? null,
+        name: v.value.name,
+        email: v.value.email,
+        phone: v.value.phone,
+        businessName: v.value.businessName,
+        score: v.value.score,
+        notes: v.value.notes,
+        emails,
+      })
+      return { ...created, label: formatSlot(new Date(slot.start), cfg.timezone), emails }
     } catch (e) {
       throw new BookingError(e instanceof Error ? e.message : "I could not create the meeting.", "provider_error")
     }

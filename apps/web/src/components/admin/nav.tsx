@@ -8,11 +8,13 @@ import { Button } from "@/components/ui/button"
 const ITEMS = [
   { href: "/admin", label: "Overview" },
   { href: "/admin/analisis", label: "Analyses" },
+  { href: "/admin/reuniones", label: "Meetings" },
   { href: "/admin/scoring", label: "Score" },
   { href: "/admin/agentes", label: "Agents" },
   { href: "/admin/conocimiento", label: "Knowledge" },
   { href: "/admin/costos", label: "Costs" },
   { href: "/admin/busquedas", label: "Lookups" },
+  { href: "/admin/docs", label: "Docs" },
 ]
 
 export function AdminNav({ email }: { email: string }) {
