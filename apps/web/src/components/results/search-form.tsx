@@ -105,7 +105,7 @@ export function SearchForm({
       className="flex w-full flex-col gap-2 sm:flex-row"
     >
       <label htmlFor="business-query" className="sr-only">
-        Your business name
+        Your restaurant name
       </label>
       <div className="relative flex-1">
         <IconSearch className="pointer-events-none absolute start-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
@@ -128,7 +128,7 @@ export function SearchForm({
           autoFocus
           autoComplete="off"
           enterKeyHint="search"
-          placeholder="Your business name"
+          placeholder="Your restaurant name"
           className="h-12 w-full rounded-xl border bg-card ps-10 pe-4 text-touch text-foreground outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-focus-ring"
         />
         {showList && (items.length > 0 || empty) ? (
