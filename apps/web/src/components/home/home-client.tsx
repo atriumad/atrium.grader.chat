@@ -14,7 +14,7 @@ import { Prose } from "@/components/results/prose"
 import { Report } from "@/components/results/report"
 import { Scan, type ScanStep } from "@/components/results/scan"
 import { Logo } from "@/components/brand/logo"
-import { Shot } from "@/components/landing/shot"
+import { ShotTour } from "@/components/landing/shot-tour"
 import { ScrollCta } from "@/components/landing/scroll-cta"
 import { Bubble, BubbleContent } from "@/components/ui/bubble"
 import { Button } from "@/components/ui/button"
@@ -426,7 +426,7 @@ export function Home({ landing, proof }: { landing: React.ReactNode; proof?: Rea
             </ul>
           </section>
           <div className="mt-12 px-4 sm:px-6">
-            <Shot shot="dashboard" fade priority alt="The Atrium report for a sample restaurant: score, competitors, map and signals" />
+            <ShotTour tour="dashboard" priority alt="The Atrium report for a sample restaurant: score, competitors, map and signals" />
           </div>
           {landing}
         </>

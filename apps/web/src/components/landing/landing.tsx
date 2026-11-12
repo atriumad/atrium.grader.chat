@@ -5,7 +5,7 @@ import { FAQ } from "@/lib/site"
 import { FocusSearchButton } from "./focus-search"
 import Image from "next/image"
 
-import { Shot } from "./shot"
+import { ShotTour } from "./shot-tour"
 import { Reveal } from "./reveal"
 
 // The part of the home page under the search box. One idea per section, everything centred, one
@@ -78,7 +78,7 @@ export function Landing() {
             <p className="type-lead mx-auto text-body">A written analysis, the three actions that matter most and a direct line to the team.</p>
           </Reveal>
           <Reveal className="mt-12 w-full" delay={80}>
-            <Shot shot="plan" alt="The written analysis of the report with the three actions that matter most and a button to book a meeting" />
+            <ShotTour tour="plan" alt="The written analysis of the report with the three actions that matter most and a button to book a meeting" />
           </Reveal>
         </div>
       </section>
